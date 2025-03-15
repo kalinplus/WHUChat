@@ -1,0 +1,9 @@
+# 后端部分的总 gitignore 文件
+
+# 忽略所有的 build/ 目录
+# build/ 目录包含构建形成的二进制文件等
+**/build/
+
+# 忽略所有的 Makefile 文件
+# Makefile 文件可以由 CMake 脚本生成
+**/Makefile
