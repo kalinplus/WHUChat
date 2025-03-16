@@ -1,9 +1,14 @@
+#include "config_mgr.hpp"
+#include "logic_mgr.hpp"
+#include "asio_iocontext_pool.hpp"
+
 #include <iostream>
-#include "fmt_test.h"
+#include <filesystem>
 
 int main( int argc, char* argv[] )
 {
-    std::cout << FmtTester().Print() << std::endl;
+    // 获取配置管理器
+    auto config_mgr = ConfigMgr::GetInstance();
 
     return 0;
 }

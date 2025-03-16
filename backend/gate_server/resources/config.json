@@ -1,0 +1,27 @@
+{
+    "const": {
+        "code_prefix": "code_"
+    },
+    "gate_server": {
+        "port": "8080"
+    },
+    "verify_server": {
+        "port": "50051"
+    },
+    "status_server": {
+        "host": "127.0.0.1",
+        "port": "50052"
+    },
+    "redis": {
+        "host": "127.0.0.1",
+        "port": "6380",
+        "password": "248313"
+    },
+    "mysql": {
+        "host": "127.0.0.1",
+        "post": "3308",
+        "user": "root",
+        "password": "248313",
+        "schema": "chat"
+    }
+}

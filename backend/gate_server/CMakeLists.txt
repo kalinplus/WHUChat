@@ -18,7 +18,9 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 set( CMAKE_CXX_EXTENSIONS OFF )
 
 # 设置源码集合
-file( GLOB SOURCE_CODE "./source/*.cpp" )
+file( GLOB SOURCE_CODE "source/*.cpp" )
+# 打印源码文件宏
+message( STATUS "Source code: " ${SOURCE_CODE} )
 
 # 第三方库包含
 find_package( 
@@ -32,15 +34,19 @@ add_executable( ${PROJ_NAME}
 
 # 设定 include 目录
 target_include_directories( ${PROJ_NAME}
-    PRIVATE "./source/include/"
+    PRIVATE 
+        "./source/include/" # 自己编写的头文件
+        "/home/lubover/code_resources/thirdparty/" # 下载的第三方源码
 )
 
 # 设定所需链接第三方库
 target_link_libraries( ${PROJ_NAME}
-    PRIVATE fmt::fmt
+    PRIVATE 
+        fmt::fmt # fmt 字符串格式化库
+        mysqlcppconn # MySQL C++ 连接库
 )
 
-# # 设置二进制可执行文件的位置，应当为 build/bin/
-# set_target_properties( ${PROJ_NAME}
-#     PROPERTIES RUNTIME_OUTPUT_DIRECTORY "./build/bin"
-# )
+# 添加不同编译模式下的宏定义
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")  
+    add_definitions(-DDEBUG) # DEBUG 宏
+endif()  
