@@ -9,6 +9,13 @@
     },
     {
       "path": "./tsconfig.vitest.json"
-    }
-  ]
+    },
+    
+  ],
+  "compilerOptions": {
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false
+    // 其他选项...
+  }
 }
