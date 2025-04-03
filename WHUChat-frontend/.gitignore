@@ -1,6 +1,5 @@
-# WHUChat-frontend .gitignore
+# WHUChat .gitignore
 node_modules
-**/node_modules/
 /dist
 
 # local env files
