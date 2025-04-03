@@ -4,12 +4,12 @@ import { getDefaultConversationData } from "@/utils/helper";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
-const i18n = useI18n();
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const drawer = ref(false); // 假设 useDrawer 是管理抽屉状态的
 const conversation = ref(getDefaultConversationData());
-const routerParams = route.params as {id?: number};
+const routerParams = route.params as { id?: number };
 
 // Mock data for conversations and messages
 // const mockConversations = {
@@ -131,13 +131,13 @@ const createNewConversation = () => {
     return router.push("/?new");
   }
   conversation.value = Object.assign(getDefaultConversationData(), {
-    topic: i18n.t("newConversation"),
+    topic: t("newConversation"),
   });
 };
 
 // 计算属性：导航标题  当值发生变化，即切换话题时，重新计算并渲染
 const navTitle = computed(() => {
-  return conversation.value.topic || i18n.t("newConversation");
+  return conversation.value.topic || t("newConversation");
 });
 
 onMounted(async () => {
@@ -156,7 +156,6 @@ onMounted(async () => {
 //     createNewConversation();
 //   }
 // });
-
 </script>
 
 <template>
@@ -168,7 +167,7 @@ onMounted(async () => {
     <v-spacer></v-spacer>
 
     <v-btn
-      :title="$t('newConversation')"
+      :title="t('newConversation')"
       icon="add"
       @click="createNewConversation"
       class="d-md-none ma-3"
@@ -178,7 +177,7 @@ onMounted(async () => {
       class="text-none d-none d-md-block"
       @click="createNewConversation"
     >
-      {{ $t("newConversation") }}
+      {{ t("newConversation") }}
     </v-btn>
   </v-app-bar>
 
@@ -187,4 +186,3 @@ onMounted(async () => {
     <!-- <Conversation :conversation="conversation" /> -->
   </v-main>
 </template>
-

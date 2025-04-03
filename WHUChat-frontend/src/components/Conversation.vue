@@ -1,16 +1,34 @@
-<script setup>
+<script setup lang="ts">
 import {
   EventStreamContentType,
   fetchEventSource,
 } from "@microsoft/fetch-event-source";
 
-const { $i18n, $settings } = useNuxtApp();
-const runtimeConfig = useRuntimeConfig();
-const currentModel = useCurrentModel();
-const openaiApiKey = useApiKey();
+// const { $i18n, $settings } = useNuxtApp();
+// const runtimeConfig = useRuntimeConfig();
+import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
+import { useStateStore } from "@/stores/states";
+import { storeToRefs } from "pinia";
+import { addConversation } from "@/utils/helper";
+// const stateStore = useStateStore();
+const { t } = useI18n();
+// const currentModel = useCurrentModel();
+// const openaiApiKey = useApiKey();
+const { currentModel } = storeToRefs(useStateStore());
 const fetchingResponse = ref(false);
-const messageQueue = [];
+// TODO: 明确message的内容
+const messageQueue: { [key: string]: any } = [];
 const frugalMode = ref(true);
+
+interface Settings {
+  enableWebSearch: boolean;
+  frugalMode: boolean;
+}
+const settings = ref<Settings>({
+  enableWebSearch: true,
+  frugalMode: true,
+});
 let isProcessingQueue = false;
 
 const props = defineProps({
@@ -20,6 +38,8 @@ const props = defineProps({
   },
 });
 
+const typewriter = import.meta.env.VITE_TYPEWRITER === "true";
+const typewriterDelay = import.meta.env.VITE_TYPEWRITERDELAY as number;
 const processMessageQueue = () => {
   if (isProcessingQueue || messageQueue.length === 0) {
     return;
@@ -31,7 +51,7 @@ const processMessageQueue = () => {
   }
   isProcessingQueue = true;
   const nextMessage = messageQueue.shift();
-  if (runtimeConfig.public.typewriter) {
+  if (typewriter) {
     let wordIndex = 0;
     const intervalId = setInterval(() => {
       props.conversation.messages[
@@ -43,7 +63,7 @@ const processMessageQueue = () => {
         isProcessingQueue = false;
         processMessageQueue();
       }
-    }, runtimeConfig.public.typewriterDelay);
+    }, typewriterDelay);
   } else {
     props.conversation.messages[
       props.conversation.messages.length - 1
@@ -53,14 +73,14 @@ const processMessageQueue = () => {
   }
 };
 
-let ctrl;
+let ctrl: any;
 const abortFetch = () => {
   if (ctrl) {
     ctrl.abort();
   }
   fetchingResponse.value = false;
 };
-const fetchReply = async (message) => {
+const fetchReply = async (message: any) => {
   ctrl = new AbortController();
 
   let msg = message;
@@ -69,12 +89,12 @@ const fetchReply = async (message) => {
   } else {
     message = [message];
   }
-
-  let webSearchParams = {};
+  // TODO: 明确params的内容
+  let webSearchParams: { [key: string]: any } = {};
   if (enableWebSearch.value || msg.tool == "web_search") {
     webSearchParams["web_search"] = {
       ua: navigator.userAgent,
-      default_prompt: $i18n.t("webSearchDefaultPrompt"),
+      default_prompt: t("webSearchDefaultPrompt"),
     };
   }
 
@@ -86,12 +106,13 @@ const fetchReply = async (message) => {
     msg.type = 110;
   }
 
+  // TODO: 更改发送数据定义以适应我们的接口
   const data = Object.assign(
     {},
     currentModel.value,
     {
-      openaiApiKey:
-        $settings.open_api_key_setting === "True" ? openaiApiKey.value : null,
+      // openaiApiKey: null,
+      // $settings.open_api_key_setting === "True" ? openaiApiKey.value : null,
       message: message,
       conversationId: props.conversation.id,
       frugalMode: frugalMode.value,
@@ -109,7 +130,7 @@ const fetchReply = async (message) => {
       },
       body: JSON.stringify(data),
       openWhenHidden: true,
-      onopen(response) {
+      onopen: async (response) => {
         if (
           response.ok &&
           response.headers.get("content-type") === EventStreamContentType
@@ -128,10 +149,10 @@ const fetchReply = async (message) => {
           `Failed to send message. Server closed the connection unexpectedly.`
         );
       },
-      onerror(err) {
+      onerror(err: any) {
         throw err;
       },
-      async onmessage(message) {
+      async onmessage(message: any) {
         const event = message.event;
         const data = JSON.parse(message.data);
 
@@ -155,10 +176,10 @@ const fetchReply = async (message) => {
           ].id = data.messageId;
           if (!props.conversation.id) {
             props.conversation.id = data.conversationId;
-            genTitle(props.conversation.id);
+            // genTitle(props.conversation.id);
           }
           if (data.newDocId) {
-            editor.value.refreshDocList();
+            editor.value?.refreshDocList();
           }
           return;
         }
@@ -169,22 +190,24 @@ const fetchReply = async (message) => {
         scrollChatWindow();
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
     abortFetch();
     showSnackbar(err.message);
   }
 };
 
-const grab = ref(null);
+const grab = ref<{
+  scrollIntoView: (obj: { behavior: string }) => void;
+} | null>(null);
 const scrollChatWindow = () => {
   if (grab.value === null) {
     return;
   }
-  grab.value.scrollIntoView({ behavior: "smooth" });
+  grab.value?.scrollIntoView({ behavior: "smooth" });
 };
 
-const send = (message) => {
+const send = (message: any) => {
   fetchingResponse.value = true;
   if (props.conversation.messages.length === 0) {
     addConversation(props.conversation);
@@ -211,30 +234,33 @@ const stop = () => {
 
 const snackbar = ref(false);
 const snackbarText = ref("");
-const showSnackbar = (text) => {
+const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
 };
 
-const editor = ref(null);
-const usePrompt = (prompt) => {
-  editor.value.usePrompt(prompt);
+const editor = ref<{
+  refreshDocList: () => void;
+  usePrompt: (prompt: any) => void;
+} | null>(null);
+const usePrompt = (prompt: string) => {
+  editor.value?.usePrompt(prompt);
 };
 
-const deleteMessage = (index) => {
+const deleteMessage = (index: number) => {
   props.conversation.messages.splice(index, 1);
 };
 
-const toggleMessage = (index) => {
+const toggleMessage = (index: number) => {
   props.conversation.messages[index].is_disabled =
     !props.conversation.messages[index].is_disabled;
 };
 
 const enableWebSearch = ref(false);
 
-onNuxtReady(() => {
-  currentModel.value = getCurrentModel();
-});
+// onMounted(() => {
+//   currentModel.value = getCurrentModel();
+// });
 </script>
 
 <template>
@@ -255,6 +281,7 @@ onNuxtReady(() => {
                 class="d-flex align-center"
                 :class="message.is_bot ? 'justify-start' : 'justify-end'"
               >
+                <!-- TODO: 添加组件定义 -->
                 <MessageActions
                   v-if="!message.is_bot"
                   :message="message"
@@ -263,12 +290,14 @@ onNuxtReady(() => {
                   :delete-message="deleteMessage"
                   :toggle-message="toggleMessage"
                 />
+                <!-- TODO: 添加组件定义 -->
                 <MsgContent
                   :message="message"
                   :index="index"
                   :use-prompt="usePrompt"
                   :delete-message="deleteMessage"
                 />
+                <!-- TODO: 添加组件定义 -->
                 <MessageActions
                   v-if="message.is_bot"
                   :message="message"
@@ -296,6 +325,7 @@ onNuxtReady(() => {
           class="mr-3"
           @click="stop"
         ></v-btn>
+        <!-- TODO: 添加组件定义 -->
         <MsgEditor
           ref="editor"
           :send-message="send"
@@ -306,24 +336,21 @@ onNuxtReady(() => {
       <v-toolbar density="comfortable" color="transparent">
         <Prompt v-show="!fetchingResponse" :use-prompt="usePrompt" />
         <v-switch
-          v-if="$settings.open_web_search === 'True'"
+          v-if="settings.enableWebSearch === true"
           v-model="enableWebSearch"
           inline
           hide-details
           color="primary"
-          :label="$t('webSearch')"
+          :label="t('webSearch')"
         ></v-switch>
         <v-spacer></v-spacer>
-        <div
-          v-if="$settings.open_frugal_mode_control === 'True'"
-          class="d-flex align-center"
-        >
+        <div v-if="settings.frugalMode === true" class="d-flex align-center">
           <v-switch
             v-model="frugalMode"
             inline
             hide-details
             color="primary"
-            :label="$t('frugalMode')"
+            :label="t('frugalMode')"
           ></v-switch>
           <v-dialog transition="dialog-bottom-transition" width="auto">
             <template v-slot:activator="{ props }">
@@ -336,12 +363,9 @@ onNuxtReady(() => {
             </template>
             <template v-slot:default="{ isActive }">
               <v-card>
-                <v-toolbar
-                  color="primary"
-                  :title="$t('frugalMode')"
-                ></v-toolbar>
+                <v-toolbar color="primary" :title="t('frugalMode')"></v-toolbar>
                 <v-card-text>
-                  {{ $t("frugalModeTip") }}
+                  {{ t("frugalModeTip") }}
                 </v-card-text>
               </v-card>
             </template>
