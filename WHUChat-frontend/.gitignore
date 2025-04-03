@@ -1,4 +1,4 @@
-# .DS_Store
+# WHUChat-frontend .gitignore
 node_modules
 /dist
 
