@@ -3,12 +3,14 @@ import { ref, onMounted, computed } from "vue";
 import { getDefaultConversationData } from "@/utils/helper";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useAuthFetch } from "@/composables/fetch";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const drawer = ref(false); // 假设 useDrawer 是管理抽屉状态的
-const conversation = ref(getDefaultConversationData());
+
+const conversation = ref<{ id: number | null; messages: any[]; [key: string]: any }>(getDefaultConversationData());
 const routerParams = route.params as { id?: number };
 
 // Mock data for conversations and messages
@@ -110,20 +112,20 @@ const routerParams = route.params as { id?: number };
 
 // TODO: 每个对话的标识url存在params的id里
 const loadConversation = async () => {
-  // const { data, error } = await useAuthFetch(
-  //   "/api/chat/conversations/" + route.params.id
-  // );
-  // if (!error.value) {
-  //   conversation.value = Object.assign(conversation.value, data.value);
-  // }
+  const { data, error } = await useAuthFetch(
+    "/api/chat/conversations/" + routerParams.id
+  );
+  if (!error.value) {
+    conversation.value = Object.assign(conversation.value, data.value);
+  }
 };
 
 const loadMessage = async () => {
-  // const { data, error } = await useAuthFetch('/api/chat/messages/?conversationId=' + route.params.id)
-  // if (!error.value) {
-  //   conversation.value.messages = data.value
-  //   conversation.value.id = route.params.id
-  // }
+  const { data, error } = await useAuthFetch('/api/chat/messages/?conversationId=' + routerParams.id)
+  if (!error.value) {
+    conversation.value.messages = data.value as typeof conversation.value.messages
+    conversation.value.id = routerParams.id ?? null
+  }
 };
 
 const createNewConversation = () => {
@@ -183,6 +185,6 @@ onMounted(async () => {
 
   <v-main>
     <Welcome v-if="!routerParams.id && conversation.messages.length === 0" />
-    <!-- <Conversation :conversation="conversation" /> -->
+    <Conversation :conversation="conversation" />
   </v-main>
 </template>

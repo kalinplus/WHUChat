@@ -4,6 +4,7 @@ import {
   fetchEventSource,
 } from "@microsoft/fetch-event-source";
 
+// TODO: 将 fetch-event-source 改为 http 的某个流式传输
 // const { $i18n, $settings } = useNuxtApp();
 // const runtimeConfig = useRuntimeConfig();
 import { ref, onMounted } from "vue";
@@ -281,7 +282,6 @@ const enableWebSearch = ref(false);
                 class="d-flex align-center"
                 :class="message.is_bot ? 'justify-start' : 'justify-end'"
               >
-                <!-- TODO: 添加组件定义 -->
                 <MessageActions
                   v-if="!message.is_bot"
                   :message="message"
@@ -290,7 +290,6 @@ const enableWebSearch = ref(false);
                   :delete-message="deleteMessage"
                   :toggle-message="toggleMessage"
                 />
-                <!-- TODO: 添加组件定义 -->
                 <MsgContent
                   :message="message"
                   :index="index"
