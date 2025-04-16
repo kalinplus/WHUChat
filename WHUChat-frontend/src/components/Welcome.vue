@@ -23,7 +23,8 @@
             <v-row>
               <v-col>
                 <div class="d-flex flex-column align-center">
-                  <v-icon icon="sunny"></v-icon>
+                  <!-- 修改为 mdi 图标 -->
+                  <v-icon>mdi-white-balance-sunny</v-icon>
                   <h3 class="text-h6">
                     {{ t("welcomeScreen.examples.title") }}
                   </h3>
@@ -40,7 +41,8 @@
             <v-row>
               <v-col>
                 <div class="d-flex flex-column align-center">
-                  <v-icon icon="bolt"></v-icon>
+                  <!-- 修改为 mdi 图标 -->
+                  <v-icon>mdi-lightning-bolt</v-icon>
                   <h3 class="text-h6">
                     {{ t("welcomeScreen.capabilities.title") }}
                   </h3>
@@ -57,7 +59,8 @@
             <v-row>
               <v-col>
                 <div class="d-flex flex-column align-center">
-                  <v-icon icon="warning_amber"></v-icon>
+                  <!-- 修改为 mdi 图标 -->
+                  <v-icon>mdi-alert</v-icon>
                   <h3 class="text-h6">
                     {{ t("welcomeScreen.limitations.title") }}
                   </h3>
@@ -100,3 +103,10 @@ const limitations = ref([
   t("welcomeScreen.limitations.item3"),
 ]);
 </script>
+
+<style scoped>
+.v-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+</style>

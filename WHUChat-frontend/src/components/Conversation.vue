@@ -20,7 +20,7 @@ const { currentModel } = storeToRefs(useStateStore());
 const fetchingResponse = ref(false);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
-const frugalMode = ref(true);
+const frugalMode = ref(false);
 
 interface Settings {
   enableWebSearch: boolean;
@@ -265,119 +265,92 @@ const enableWebSearch = ref(false);
 </script>
 
 <template>
-  <div v-if="conversation">
-    <div v-if="conversation.loadingMessages" class="text-center">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-    </div>
-    <div v-else>
-      <div v-if="conversation.messages" ref="chatWindow">
-        <v-container>
-          <v-row>
-            <v-col
-              v-for="(message, index) in conversation.messages"
-              :key="index"
-              cols="12"
-            >
-              <div
-                class="d-flex align-center"
-                :class="message.is_bot ? 'justify-start' : 'justify-end'"
-              >
-                <MessageActions
-                  v-if="!message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                  :toggle-message="toggleMessage"
-                />
-                <MsgContent
-                  :message="message"
-                  :index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-                <!-- TODO: 添加组件定义 -->
-                <MessageActions
-                  v-if="message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-
-        <div ref="grab" class="w-100" style="height: 200px"></div>
-      </div>
-    </div>
-  </div>
-
   <v-footer app class="footer">
-    <div class="px-md-16 w-100 d-flex flex-column">
-      <div class="d-flex align-center">
-        <v-btn
-          v-show="fetchingResponse"
-          icon="close"
-          title="stop"
-          class="mr-3"
-          @click="stop"
-        ></v-btn>
-        <!-- TODO: 添加组件定义 -->
-        <MsgEditor
-          ref="editor"
-          :send-message="send"
-          :disabled="fetchingResponse"
-          :loading="fetchingResponse"
-        />
-      </div>
-      <v-toolbar density="comfortable" color="transparent">
-        <Prompt v-show="!fetchingResponse" :use-prompt="usePrompt" />
-        <v-switch
-          v-if="settings.enableWebSearch === true"
-          v-model="enableWebSearch"
-          inline
-          hide-details
-          color="primary"
-          :label="t('webSearch')"
-        ></v-switch>
-        <v-spacer></v-spacer>
-        <div v-if="settings.frugalMode === true" class="d-flex align-center">
-          <v-switch
-            v-model="frugalMode"
-            inline
-            hide-details
-            color="primary"
-            :label="t('frugalMode')"
-          ></v-switch>
-          <v-dialog transition="dialog-bottom-transition" width="auto">
-            <template v-slot:activator="{ props }">
-              <v-icon
-                color="grey"
-                v-bind="props"
-                icon="help_outline"
-                class="ml-3"
-              ></v-icon>
-            </template>
-            <template v-slot:default="{ isActive }">
-              <v-card>
-                <v-toolbar color="primary" :title="t('frugalMode')"></v-toolbar>
-                <v-card-text>
-                  {{ t("frugalModeTip") }}
-                </v-card-text>
-              </v-card>
-            </template>
-          </v-dialog>
+    <v-card flat width="100%" class="message-control-panel pa-3">
+      <div class="d-flex flex-column">
+        <!-- 上部分：消息编辑区和停止按钮 -->
+        <div class="d-flex align-center">
+          <v-btn v-show="fetchingResponse" @click="stop" class="mr-3" icon color="error">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <!-- MsgEditor 组件 -->
+          <MsgEditor
+            ref="editor"
+            :send-message="send"
+            :disabled="fetchingResponse"
+            :loading="fetchingResponse"
+          />
         </div>
-      </v-toolbar>
-    </div>
+
+        <!-- 下部分：功能区域 -->
+        <div class="d-flex align-center flex-wrap mt-2">
+          <Prompt v-show="!fetchingResponse" :use-prompt="usePrompt" class="mr-2" />
+
+          <!-- 网页搜索按钮 -->
+          <v-btn
+            v-if="settings.enableWebSearch === true"
+            :color="enableWebSearch ? 'primary' : ''"
+            variant="outlined"
+            rounded="pill"
+            size="small"
+            class="mr-2 my-1"
+            prepend-icon="mdi-web"
+            @click="enableWebSearch = !enableWebSearch"
+            style="margin-left: 10px"
+          >
+            {{ t('webSearch') }}
+            <template v-slot:append>
+              <v-icon size="x-small" :color="enableWebSearch ? 'aliceblue' : ''" class="ml-1">
+                {{ enableWebSearch ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+              </v-icon>
+            </template>
+          </v-btn>
+
+          <!-- 节俭模式按钮 -->
+          <div v-if="settings.frugalMode === true" class="d-flex align-center">
+            <v-btn
+              :color="frugalMode ? 'primary' : ''"
+              variant="outlined"
+              rounded="pill"
+              size="small"
+              class="mr-2 my-1"
+              prepend-icon="mdi-lightning-bolt"
+              @click="frugalMode = !frugalMode"
+            >
+              {{ t('frugalMode') }}
+              <template v-slot:append>
+                <v-icon size="x-small" :color="frugalMode ? 'aliceblue' : ''" class="ml-1">
+                  {{ frugalMode ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+                </v-icon>
+              </template>
+            </v-btn>
+
+            <v-tooltip :text="t('frugalModeTip')" location="top" max-width="300">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  icon
+                  variant="text"
+                  v-bind="props"
+                  class="ml-0"
+                  density="comfortable"
+                  size="small"
+                >
+                  <v-icon color="grey" size="small">mdi-help-circle-outline</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
+          </div>
+        </div>
+      </div>
+    </v-card>
   </v-footer>
+
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
 
     <template v-slot:actions>
       <v-btn color="red" variant="text" @click="snackbar = false">
+        <v-icon>mdi-close</v-icon>
         Close
       </v-btn>
     </template>
@@ -387,5 +360,23 @@ const enableWebSearch = ref(false);
 <style scoped>
 .footer {
   width: 100%;
+  padding: 0;
+}
+
+.message-control-panel {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: var(--v-theme-surface);
+}
+
+/* 深色主题适配 */
+:deep(.v-theme--dark) .message-control-panel {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 确保按钮在小屏幕上合理换行 */
+@media (max-width: 600px) {
+  .d-flex.align-center.flex-wrap {
+    justify-content: space-between;
+  }
 }
 </style>

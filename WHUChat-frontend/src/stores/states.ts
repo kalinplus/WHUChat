@@ -23,7 +23,11 @@ export const useStateStore = defineStore('stateStore', {
       this.user = user;
     },
     toggleDrawer() {
+      // console.log(this.drawer)
       this.drawer = !this.drawer;
     },
+    setConversations(conversations: any[]) {
+      this.conversations = conversations;
+    }
   },
 })

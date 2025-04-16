@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppBar: typeof import('./components/AppBar.vue')['default']
     AppFooter: typeof import('./components/AppFooter.vue')['default']
     Conversation: typeof import('./components/Conversation.vue')['default']
     DocumentsManage: typeof import('./components/DocumentsManage.vue')['default']
@@ -14,8 +15,12 @@ declare module 'vue' {
     MessageAction: typeof import('./components/MessageAction.vue')['default']
     MsgContent: typeof import('./components/MsgContent.vue')['default']
     MsgEditor: typeof import('./components/MsgEditor.vue')['default']
+    NavigationDrawer: typeof import('./components/NavigationDrawer.vue')['default']
+    Prompt: typeof import('./components/Prompt.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UserAvatar: typeof import('./components/UserAvatar.vue')['default']
+    UserFooter: typeof import('./components/UserFooter.vue')['default']
     Welcome: typeof import('./components/Welcome.vue')['default']
     WelcomeCard: typeof import('./components/WelcomeCard.vue')['default']
   }
