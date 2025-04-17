@@ -145,6 +145,12 @@ const createNewConversation = () => {
     topic: t("newConversation"),
   });
 };
+const signIn = () => {
+  router.push("/login");
+};
+const signUp = () => {
+  router.push("/register");
+};
 
 // 计算属性：导航标题  当值发生变化，即切换话题时，重新计算并渲染
 const navTitle = computed(() => {
@@ -198,6 +204,7 @@ const signOut = async () => {
     <AppBar />
     <NavigationDrawer />
 
+<<<<<<< HEAD
     <v-main>
       <div class="content-wrapper">
         <div
@@ -210,6 +217,45 @@ const signOut = async () => {
       </div>
     </v-main>
   </v-app>
+=======
+    <v-toolbar-title>{{ navTitle }}</v-toolbar-title>
+
+    <v-spacer></v-spacer>
+
+    <v-btn
+      :title="t('newConversation')"
+      icon="add"
+      @click="createNewConversation"
+      class="d-md-none ma-3"
+    ></v-btn>
+    <v-btn
+      variant="outlined"
+      class="text-none d-none d-md-block"
+      @click="createNewConversation"
+    >
+      {{ t("newConversation") }}
+    </v-btn>
+    <v-btn
+      variant="outlined"
+      class="text-none d-none d-md-block"
+      @click="signIn"
+    >
+      {{ t("signIn") }}
+    </v-btn>
+    <v-btn
+      variant="outlined"
+      class="text-none d-none d-md-block"
+      @click="signUp"
+    >
+      {{ t("signUp") }}
+    </v-btn>
+  </v-app-bar>
+
+  <v-main>
+    <Welcome v-if="!routerParams.id && conversation.messages.length === 0" />
+    <Conversation :conversation="conversation" />
+  </v-main>
+>>>>>>> 16875e6 (add register page)
 </template>
 
 <style scoped>
