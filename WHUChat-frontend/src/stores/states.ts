@@ -1,9 +1,9 @@
-import {defineStore} from 'pinia'
-import { getCurrentModel, getStoredApiKey } from '@/utils/localStorage';
+import { defineStore } from "pinia";
+import { getCurrentModel, getStoredApiKey } from "@/utils/localStorage";
 
-export const useStateStore = defineStore('stateStore', {
+export const useStateStore = defineStore("stateStore", {
   state: () => ({
-    currentModel: getCurrentModel(), // 替代 useCurrentModel
+    currentModel: getCurrentModel() as any, // 替代 useCurrentModel
     apiKey: getStoredApiKey(), // 替代 useApiKey
     conversations: [] as any[], // 替代 useConversations
     user: null as any, // 替代 useUser
@@ -11,7 +11,14 @@ export const useStateStore = defineStore('stateStore', {
   }),
   actions: {
     setCurrentModel(model: any) {
-      this.currentModel = model;
+      // 确保模型对象包含所有必要字段
+      this.currentModel = {
+        ...model,
+        model_id: model.model_id || model.id,
+        model_class: model.model_class || "anthropic", // 默认值
+      };
+      // 保存到本地存储
+      localStorage.setItem("currentModel", JSON.stringify(this.currentModel));
     },
     setApiKey(key: string) {
       this.apiKey = key;
@@ -28,6 +35,6 @@ export const useStateStore = defineStore('stateStore', {
     },
     setConversations(conversations: any[]) {
       this.conversations = conversations;
-    }
+    },
   },
-})
+});

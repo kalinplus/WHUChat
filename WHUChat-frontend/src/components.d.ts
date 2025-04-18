@@ -13,6 +13,7 @@ declare module 'vue' {
     DocumentsManage: typeof import('./components/DocumentsManage.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     MessageAction: typeof import('./components/MessageAction.vue')['default']
+    ModelSelector: typeof import('./components/ModelSelector.vue')['default']
     MsgContent: typeof import('./components/MsgContent.vue')['default']
     MsgEditor: typeof import('./components/MsgEditor.vue')['default']
     NavigationDrawer: typeof import('./components/NavigationDrawer.vue')['default']

@@ -110,5 +110,7 @@
   },
   "settings": "设置",
   "clickToSignIn": "点击登录",
-  "guest": "游客"
+  "guest": "游客",
+  "selectModel": "模型选择",
+  "close": "关闭"
 }

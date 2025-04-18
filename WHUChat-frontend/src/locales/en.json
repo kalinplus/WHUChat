@@ -102,5 +102,7 @@
   },
   "settings": "Settings",
   "guest": "guest",
-  "clickToSignIn": "Click To Sign In"
+  "clickToSignIn": "Click To Sign In",
+  "selectModel": "Select Model",
+  "close": "Close"
 }
