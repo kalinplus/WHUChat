@@ -1,75 +1,78 @@
 <template>
-  <v-sheet class="register" width="300">
-    <h1 class="title">{{ t("signUp") }}</h1>
-    <v-form ref="form">
-      <v-text-field
-        v-model="user.username"
-        :rules="nameRules"
-        :label="t('username')"
-        required
-      />
-      <v-text-field
-        v-model="user.password"
-        :rules="passwordRules"
-        :label="t('password')"
-        type="password"
-        required
-      />
-      <v-text-field
-        v-model="user.email"
-        :rules="emailRules"
-        :label="t('email')"
-        required
-      />
-      <v-text-field
-        v-model="confirmPassword"
-        :rules="confirmPasswordRules"
-        :label="t('Please enter your password')"
-        type="password"
-        required
-      />
-      <v-checkbox
-        v-model="checkbox"
-        :rules="[(v) => !!v || t('You must agree to continue')]"
-        :label="t('agreeToThePrivacyPolicyToRegisterOrLogIn')"
-        required
-      />
+  <v-app>
+    <v-main>
+      <v-sheet class="register" width="300">
+        <h1 class="title">{{ t("signUp") }}</h1>
+        <v-form ref="form">
+          <v-text-field
+            v-model="user.username"
+            :rules="nameRules"
+            :label="t('username')"
+            required
+          />
+          <v-text-field
+            v-model="user.password"
+            :rules="passwordRules"
+            :label="t('password')"
+            :type="showPassword ? 'text' : 'password'"
+            :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+            @click:append-inner="showPassword = !showPassword"
+            required
+          />
 
-      <div class="d-flex flex-column">
-        <v-btn class="mt-4" color="success" block @click="validate">
-          {{ t("createAccount") }}
-        </v-btn>
+          <v-text-field
+            v-model="user.email"
+            :rules="emailRules"
+            :label="t('email')"
+            required
+          />
+          <v-text-field
+            v-model="confirmPassword"
+            :rules="confirmPasswordRules"
+            :label="t('Please enter your password')"
+            type="password"
+            required
+          />
+          <v-checkbox
+            v-model="checkbox"
+            :rules="[(v) => !!v || t('You must agree to continue')]"
+            :label="t('agreeToThePrivacyPolicyToRegisterOrLogIn')"
+            required
+          />
 
-        <v-btn class="mt-4" color="success" block @click="retrunSignIn">
-          {{ t("Sign in instead") }}
-        </v-btn>
-      </div>
-    </v-form>
-  </v-sheet>
+          <div class="d-flex flex-column">
+            <v-btn class="mt-4" color="success" block @click="validate">
+              {{ t("createAccount") }}
+            </v-btn>
+
+            <v-btn class="mt-4" color="success" block @click="retrunSignIn">
+              {{ t("Sign in instead") }}
+            </v-btn>
+          </div>
+        </v-form>
+      </v-sheet>
+    </v-main>
+  </v-app>
 </template>
 <script setup lang="ts">
 import { ref } from "vue";
 import type { VForm } from "vuetify/components"; // 添加类型声明
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { useAuthFetch } from "@/composables/fetch";
 const router = useRouter();
 
 const { t } = useI18n();
 const form = ref<InstanceType<typeof VForm>>();
 const checkbox = ref(false);
 const confirmPassword = ref("");
-
-const user = ref<{
-  id: number | null;
+const showPassword = ref("");
+interface User {
   username: string;
   password: string;
   email: string;
-}>({
-  id: null,
-  username: "",
-  password: "",
-  email: "",
-});
+}
+const user = ref<User>({ username: "", password: "", email: "" });
 
 // 验证规则（无需使用ref）
 const nameRules = [
@@ -95,22 +98,43 @@ const emailRules = [
 
 // 表单验证方法
 async function validate() {
-  if (!form.value) return; // 安全校验
+  if (!form.value) return;
 
   const { valid } = await form.value.validate();
-  valid && alert(t("Your registration is successful"));
-  console.log(user.value.email);
-  user.value.username = "";
-  user.value.password = "";
-  confirmPassword.value = "";
-  checkbox.value = false;
-  user.value.email = "";
-  if (valid) {
-    router.push("/login"); // 注册成功后跳转到登录页面
+  if (!valid) return;
+
+  try {
+    // 使用现有 authFetch 发送注册请求
+    const { data, error } = await useAuthFetch("/api/account/register/", {
+      method: "POST",
+      data: {
+        username: user.value.username,
+        password: user.value.password,
+        email: user.value.email,
+      },
+    });
+    if (!error.value && data.value) {
+      // 注册成功处理
+      alert(t("registration.success"));
+      clearForm();
+      router.push("/login");
+    } else {
+      alert(t("errors.registrationFailed"));
+      // 处理邮箱重复错误（假设后端返回409状态码）
+      if (error.value?.response?.status === 409) {
+        alert(t("errors.emailExists"));
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Registration error:", err);
   }
 }
-
-// 重置表单
+const clearForm = () => {
+  user.value = { username: "", password: "", email: "" };
+  confirmPassword.value = "";
+  checkbox.value = false;
+};
 function retrunSignIn() {
   router.push("/login");
 }
@@ -119,7 +143,7 @@ function retrunSignIn() {
 <style>
 .register {
   margin: 0 auto;
-  margin-top: 200px;
+  margin-top: 150px;
 }
 .title {
   text-align: center;

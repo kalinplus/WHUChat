@@ -7,11 +7,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-<<<<<<< HEAD
     AppBar: typeof import('./components/AppBar.vue')['default']
-    AppFooter: typeof import('./components/AppFooter.vue')['default']
-=======
->>>>>>> 16875e6 (add register page)
+    ContactUs: typeof import('./components/ContactUs.vue')['default']
     Conversation: typeof import('./components/Conversation.vue')['default']
     DocumentsManage: typeof import('./components/DocumentsManage.vue')['default']
     MessageAction: typeof import('./components/MessageAction.vue')['default']
@@ -21,6 +18,7 @@ declare module 'vue' {
     Prompt: typeof import('./components/Prompt.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SettingsDialog: typeof import('./components/SettingsDialog.vue')['default']
     UserAvatar: typeof import('./components/UserAvatar.vue')['default']
     UserFooter: typeof import('./components/UserFooter.vue')['default']
     Welcome: typeof import('./components/Welcome.vue')['default']

@@ -41,8 +41,9 @@
       <UserAvatar
         :user="user"
         size="36"
-        @open-settings="emit('openSettings')"
-        @sign-out="emit('signOut')"
+        @open-settings="$emit('openSettings')"
+        @sign-out="$emit('signOut')"
+        @sign-in="$emit('signIn')"
       />
     </div>
   </div>
@@ -69,7 +70,12 @@ const props = defineProps({
 });
 
 // 定义组件事件
-const emit = defineEmits(["newConversation", "openSettings", "signOut"]);
+const emit = defineEmits([
+  "newConversation",
+  "openSettings",
+  "signOut",
+  "signIn",
+]);
 
 // 切换侧边栏方法
 const toggleDrawer = () => {

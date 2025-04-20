@@ -15,8 +15,6 @@
           <v-list-item-title class="user-name">
             {{ user?.username || t("guest") }}
           </v-list-item-title>
-
-
         </v-list-item>
       </template>
 
@@ -36,7 +34,7 @@
             <template v-slot:prepend>
               <v-icon>mdi-cog</v-icon>
             </template>
-            <v-list-item-title>{{ t("settings") }}</v-list-item-title>
+            <v-list-item-title>{{ t("settings.title") }}</v-list-item-title>
           </v-list-item>
 
           <v-list-item @click="$emit('signOut')">

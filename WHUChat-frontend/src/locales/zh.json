@@ -25,6 +25,7 @@
   "This password is too common.": "密码过于简单",
   "This password is entirely numeric.": "密码不能全是数字",
   "Your registration is successful": "恭喜你，注册成功！",
+  "Your login is successful": "恭喜你，登录成功！",
   "You can now": "现在你可以",
   "to your account.": "你的账号了。",
   "welcomeTo": "欢迎来到",
@@ -43,9 +44,7 @@
   "titlePrompt": "Title",
   "addNewPrompt": "Add a new prompt",
   "pressEnterToSendYourMessageOrShiftEnterToAddANewLine": "按回车键发送您的信息，或按Shift+Enter键添加新行",
-  "lightMode": "明亮模式",
-  "darkMode": "暗色模式",
-  "followSystem": "跟随系统",
+  
   "themeMode": "主题模式",
   "feedback": "反馈",
   "newConversation": "新的对话",
@@ -111,7 +110,15 @@
       "item3": "对2024年以后的世界和事件了解有限"
     }
   },
-  "settings": "设置",
   "clickToSignIn": "点击登录",
-  "guest": "游客"
+  "guest": "游客",
+
+  "settings": {
+    "title": "系统设置",
+    "theme": "主题模式",
+    "language": "界面语言",
+    "lightMode": "明亮模式",
+   "darkMode": "暗色模式",
+  "followSystem": "跟随系统"
+  }
 }

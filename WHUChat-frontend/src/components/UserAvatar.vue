@@ -26,10 +26,17 @@
             <template v-slot:prepend>
               <v-icon>mdi-cog</v-icon>
             </template>
-            <v-list-item-title>{{ t("settings") }}</v-list-item-title>
+            <v-list-item-title>{{ t("settings.title") }}</v-list-item-title>
           </v-list-item>
 
-          <v-list-item @click="$emit('signOut')">
+          <v-list-item v-if="!user" @click="$emit('signIn')">
+            <template v-slot:prepend>
+              <v-icon>mdi-account</v-icon>
+            </template>
+            <v-list-item-title>{{ t("clickToSignIn") }}</v-list-item-title>
+          </v-list-item>
+
+          <v-list-item v-if="user" @click="$emit('signOut')">
             <template v-slot:prepend>
               <v-icon>mdi-logout</v-icon>
             </template>
@@ -57,5 +64,5 @@ defineProps({
   },
 });
 
-defineEmits(["openSettings", "signOut"]);
+defineEmits(["openSettings", "signOut", "signIn"]);
 </script>

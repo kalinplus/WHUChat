@@ -14,6 +14,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
 
+const emit = defineEmits(["openSettings", "signOut"]);
 const stateStore = useStateStore();
 
 const { t } = useI18n();
@@ -294,7 +295,6 @@ const userAvatar = ref(null);
 
 const settingDialog = ref(false);
 // TODO: 陈致远做设置界面
-const openSettings = () => {};
 </script>
 
 <template>
@@ -331,7 +331,7 @@ const openSettings = () => {};
         @click="createNewConversation"
         class="new-chat-btn"
       >
-        {{ $t('newConversation') }}
+        {{ $t("newConversation") }}
       </v-btn>
     </div>
 
@@ -457,8 +457,8 @@ const openSettings = () => {};
       <UserFooter
         :user="user"
         size="36"
-        @open-settings="openSettings"
-        @sign-out="signOut"
+        @open-settings="$emit('openSettings')"
+        @sign-out="$emit('signOut')"
       />
     </template>
   </v-navigation-drawer>

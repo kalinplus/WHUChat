@@ -186,7 +186,7 @@ const openSettings = () => {
 const signOut = async () => {
   // 调用退出登录API
   const { data, error } = await useAuthFetch("/api/account/logout/", {
-    method: "POST"
+    method: "POST",
   });
 
   if (!error.value) {
@@ -201,61 +201,33 @@ const signOut = async () => {
 
 <template>
   <v-app>
-    <AppBar />
-    <NavigationDrawer />
-
-<<<<<<< HEAD
+    <AppBar
+      @open-settings="openSettings"
+      @sign-in="signIn"
+      @sign-out="signOut"
+      :user="user"
+    />
+    <NavigationDrawer
+      @open-settings="openSettings"
+      @sign-in="signIn"
+      @sign-out="signOut"
+      :user="user"
+    />
     <v-main>
       <div class="content-wrapper">
         <div
           class="content-inner"
-          :class="{'with-drawer': stateStore.drawer}"
+          :class="{ 'with-drawer': stateStore.drawer }"
         >
-          <Welcome v-if="!routerParams.id && conversation.messages.length === 0" />
+          <Welcome
+            v-if="!routerParams.id && conversation.messages.length === 0"
+          />
           <Conversation :conversation="conversation" />
         </div>
       </div>
     </v-main>
+    <SettingsDialog v-model="settingsDialogOpen" />
   </v-app>
-=======
-    <v-toolbar-title>{{ navTitle }}</v-toolbar-title>
-
-    <v-spacer></v-spacer>
-
-    <v-btn
-      :title="t('newConversation')"
-      icon="add"
-      @click="createNewConversation"
-      class="d-md-none ma-3"
-    ></v-btn>
-    <v-btn
-      variant="outlined"
-      class="text-none d-none d-md-block"
-      @click="createNewConversation"
-    >
-      {{ t("newConversation") }}
-    </v-btn>
-    <v-btn
-      variant="outlined"
-      class="text-none d-none d-md-block"
-      @click="signIn"
-    >
-      {{ t("signIn") }}
-    </v-btn>
-    <v-btn
-      variant="outlined"
-      class="text-none d-none d-md-block"
-      @click="signUp"
-    >
-      {{ t("signUp") }}
-    </v-btn>
-  </v-app-bar>
-
-  <v-main>
-    <Welcome v-if="!routerParams.id && conversation.messages.length === 0" />
-    <Conversation :conversation="conversation" />
-  </v-main>
->>>>>>> 16875e6 (add register page)
 </template>
 
 <style scoped>
