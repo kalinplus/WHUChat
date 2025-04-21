@@ -416,11 +416,11 @@ const usePrompt = (prompt: string) => {
 const deleteMessage = (index: number) => {
   props.conversation.messages.splice(index, 1);
 };
-
-const toggleMessage = (index: number) => {
-  props.conversation.messages[index].is_disabled =
-    !props.conversation.messages[index].is_disabled;
-};
+// FIXME: 很遗憾，我们的数据库设计中根本没有切换消息启用/禁用状态的项，所以注释了
+// const toggleMessage = (index: number) => {
+//   props.conversation.messages[index].is_disabled =
+//     !props.conversation.messages[index].is_disabled;
+// };
 
 // 处理模型选择
 const handleModelSelect = (model: any) => {
@@ -468,7 +468,6 @@ onUnmounted(() => {
                   :message-index="index"
                   :use-prompt="usePrompt"
                   :delete-message="deleteMessage"
-                  :toggle-message="toggleMessage"
                 />
                 <MsgContent
                   :message="message"
@@ -488,7 +487,7 @@ onUnmounted(() => {
           </v-row>
         </v-container>
 
-        <div ref="grab" class="w-100" style="height: 200px"></div>
+        <div ref="grab" class="w-100" style="height: 1px"></div>
       </div>
     </div>
   </div>

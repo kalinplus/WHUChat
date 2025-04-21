@@ -331,7 +331,7 @@ const openSettings = () => {};
         @click="createNewConversation"
         class="new-chat-btn"
       >
-        {{ $t('newConversation') }}
+        {{ $t("newConversation") }}
       </v-btn>
     </div>
 
@@ -385,7 +385,7 @@ const openSettings = () => {};
           :key="conversation.id"
         >
           <v-list-item
-            active-color="primary"
+            base-color="primary"
             rounded="xl"
             v-if="
               editingConversation && editingConversation.id === conversation.id
@@ -411,7 +411,7 @@ const openSettings = () => {};
           >
             <v-list-item
               rounded="xl"
-              active-color="primary"
+              base-color="primary"
               :to="conversation.id ? `/${conversation.id}` : '/'"
               v-bind="props"
             >
