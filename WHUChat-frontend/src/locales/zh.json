@@ -1,6 +1,9 @@
 {
   "invitation code": "邀请码",
   "Please enter your code": "请填写邀请码",
+  "Verification code must be 4 characters": "验证码必须为4个字符",
+  "vrfcode": "验证码",
+  "Please enter the verification code": "请填写验证码",
   "signIn": "登录",
   "signUp": "注册",
   "username": "用户名",
@@ -25,6 +28,7 @@
   "This password is too common.": "密码过于简单",
   "This password is entirely numeric.": "密码不能全是数字",
   "Your registration is successful": "恭喜你，注册成功！",
+  "Your registration failed": "注册失败",
   "Your login is successful": "恭喜你，登录成功！",
   "You can now": "现在你可以",
   "to your account.": "你的账号了。",

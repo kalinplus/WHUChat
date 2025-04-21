@@ -1,4 +1,7 @@
 {
+  "vrfcode": "vrfcode",
+  "Please enter the verification code": "Please enter the verification code",
+  "Verification code must be 4 characters": "Verification code must be 4 characters",
   "signIn":"Sign In",
   "signUp":"Sign Up",
   "username":"User Name",
@@ -18,6 +21,8 @@
   "Please confirm your password":"Please confirm your password",
    "The passwords do not match": "The passwords do not match",
   "agreeToThePrivacyPolicyToRegisterOrLogIn":"Agree to the privacy policy to register or log in",
+  "Your registration is successful":"Your registration is successful",
+  "Your registration failed":"Your registration failed",
   "You must agree to continue":"You must agree to continue",
   "welcomeTo": "Welcome to",
   "language": "Language",

@@ -2,6 +2,12 @@
   <v-app>
     <v-main>
       <v-sheet class="register" width="300">
+        <MsgAlert
+          :visible="showAlert"
+          :message="alertMessage"
+          :type="alertType"
+          @close="showAlert = false"
+        />
         <h1 class="title">{{ t("signIn") }}</h1>
         <v-form ref="form">
           <v-text-field
@@ -24,7 +30,7 @@
           />
 
           <div class="d-flex flex-column">
-            <v-btn class="mt-4" color="success" block @click="validate">
+            <v-btn class="mt-4" color="success" block @click="handleLogin">
               {{ t("clickToSignIn") }}
             </v-btn>
             <v-btn
@@ -46,14 +52,16 @@ import { ref } from "vue";
 import type { VForm } from "vuetify/components"; // 添加类型声明
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { useStateStore } from "@/stores/states";
 import { useAuthFetch } from "@/composables/fetch";
-const stateStore = useStateStore();
-const router = useRouter();
 
+const router = useRouter();
 const { t } = useI18n();
+
 const form = ref<InstanceType<typeof VForm>>();
 const checkbox = ref(false);
+const showAlert = ref(false);
+const alertMessage = ref("");
+const alertType = ref("error");
 
 const emailRules = [
   (v: string) => !!v || t("Please enter your e-mail address"),
@@ -69,60 +77,66 @@ const loginForm = ref<LoginForm>({
   email: "",
 });
 
-// 表单验证方法
-const validate = async () => {
+const isLoading = ref(false);
+const handleLogin = async () => {
+  if (isLoading.value) return;
   if (!form.value) return;
-
-  // 验证表单
   const { valid } = await form.value.validate();
   if (!valid) return;
-
+  isLoading.value = true;
   try {
-    // 使用 authFetch 发送请求
-    const { error } = await useAuthFetch<{ uuid: number }>(
+    const { data, error } = await useAuthFetch<{ uuid: number }>(
       "/api/v1/gate/login",
       {
         method: "POST",
-        data: {
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           email: loginForm.value.email,
           password: loginForm.value.password,
-        },
+        }),
         withCredentials: true, // 关键！允许携带cookie
       }
     );
 
-    // 处理错误响应
     if (!error.value) {
       handleLoginSuccess();
+      showAlert.value = true;
+      alertMessage.value = t("Your login is successful");
+      alertType.value = "success";
     } else {
-      // showLoginError(error.value?.data?.code);
+      console.error("Login uuid:", data.value);
+      console.error("Login error:", error.value);
+      showAlert.value = true;
+      alertMessage.value = t("Your login failed");
+      alertType.value = "error";
     }
-
     // 登录成功处理（由后端重定向）
   } catch (err) {
+    showAlert.value = true;
+    alertMessage.value = t("Your login failed");
+    alertType.value = "error";
     console.error(err);
+  } finally {
+    isLoading.value = false;
+    setTimeout(() => {
+      showAlert.value = false;
+    }, 1000);
   }
 };
 
 // 成功处理（如果后端未自动重定向）
-const handleLoginSuccess = () => {
+const handleLoginSuccess = async () => {
   // 检查是否已有重定向
-  if (!window.location.pathname.startsWith("/")) {
-    stateStore.setUser({ email: loginForm.value.email });
-    router.push("/");
-  }
+  setTimeout(() => {
+    const str = window.location.pathname.toString();
+    if (str != "/") {
+      router.push("/");
+    }
+  }, 1000);
 };
-
-// 错误代码映射
-// const showLoginError = (code?: number) => {
-//   const errorMap: Record<number, string> = {
-//     1009: t("errors.invalidCredentials"),
-//     1010: t("errors.accountLocked"),
-//     1011: t("errors.emailNotVerified"),
-//   };
-
-//   alert(errorMap[code || 0] || t("errors.unknown"));
-// };
 </script>
 
 <style>

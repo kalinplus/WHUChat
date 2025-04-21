@@ -59,9 +59,6 @@ import { useThemeManager } from "@/stores/settings";
 import { useLanguageManager } from "@/stores/settings";
 import { useI18n } from "vue-i18n";
 
-// import axios from "axios";
-// import router from "@/router";
-
 const { t } = useI18n();
 defineProps(["modelValue"]);
 const emit = defineEmits(["update:modelValue"]);

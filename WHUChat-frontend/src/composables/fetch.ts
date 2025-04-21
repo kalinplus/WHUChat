@@ -40,7 +40,7 @@ export const useMyFetch = <T>(url: string, options: any = {}): FetchReturn<T> =>
         baseURL,
         ...requestOptions
       });
-      data.value = response.data;
+      data.value = response.data
     } catch (err) {
       error.value = err instanceof Error ? err : new Error(String(err));
       console.error('Request error:', err);
