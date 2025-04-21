@@ -46,62 +46,44 @@ wss.on("connection", (ws, req) => {
     model_id: url.searchParams.get("model_id"),
   });
 
-  // 模拟打字响应
+  // 模拟发送分段消息
+  // 1. 发送开始标记
   setTimeout(() => {
-    ws.send(
-      JSON.stringify({
-        type: "content",
-        content: "Hello, ",
-      })
-    );
+    console.log("Sending: $$$$$$$$$$");
+    ws.send("$$$$$$$$$$");
   }, 500);
 
+  // 2. 发送消息片段 1
   setTimeout(() => {
-    ws.send(
-      JSON.stringify({
-        type: "content",
-        content: "I am a test message that simulates ",
-      })
-    );
+    const fragment = "你好，";
+    console.log("Sending:", fragment);
+    ws.send(fragment);
+  }, 1000);
+
+  // 3. 发送消息片段 2
+  setTimeout(() => {
+    const fragment = "这是一个模拟的";
+    console.log("Sending:", fragment);
+    ws.send(fragment);
   }, 1500);
 
+  // 4. 发送消息片段 3
   setTimeout(() => {
-    ws.send(
-      JSON.stringify({
-        type: "content",
-        content: "an AI response from the server. ",
-      })
-    );
+    const fragment = "分段消息。";
+    console.log("Sending:", fragment);
+    ws.send(fragment);
+  }, 2000);
+
+  // 5. 发送结束标记
+  setTimeout(() => {
+    console.log("Sending: ##########");
+    ws.send("##########");
+    // 注意：这里不再由服务器主动关闭连接
+    // 服务器发送完结束标记后就等待客户端的操作或关闭
   }, 2500);
 
-  setTimeout(() => {
-    ws.send(
-      JSON.stringify({
-        type: "content",
-        content: "This confirms your frontend is working correctly!",
-      })
-    );
-  }, 3500);
-
-  // 发送完成信号
-  setTimeout(() => {
-    ws.send(
-      JSON.stringify({
-        type: "done",
-        message_id: "67890",
-      })
-    );
-    // 在发送完 "done" 消息后，发起正常的关闭连接
-    // 使用代码 1000 表示正常关闭
-    // 可以稍微延迟一点点确保消息发出
-    setTimeout(() => {
-      console.log("Mock server closing WebSocket connection normally.");
-      ws.close(1000, "Simulation finished"); // <--- 添加这行
-    }, 100); // 延迟 100ms 关闭
-  }, 4000);
-
   ws.on("close", (code, reason) => {
-    // 添加 close 事件监听器以确认服务器端关闭
+    // 这个监听器仍然有用，可以知道连接何时关闭
     console.log(
       `WebSocket closed on server: Code ${code}, Reason: ${reason.toString()}`
     );

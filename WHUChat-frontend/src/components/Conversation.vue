@@ -5,7 +5,7 @@
 // } from "@microsoft/fetch-event-source";
 
 // TODO: 将 fetch-event-source 改为 http 的某个流式传输
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
@@ -113,6 +113,44 @@ const processMessageQueue = () => {
   }
 };
 
+// 超时熔断机制
+const WEBSOCKET_TIMEOUT_DURATION = 20000; // 20 seconds in milliseconds
+let websocketTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+const clearWebsocketTimeout = () => {
+  if (websocketTimeoutId) {
+    clearTimeout(websocketTimeoutId);
+    websocketTimeoutId = null;
+  }
+};
+
+const resetWebsocketTimeout = () => {
+  clearWebsocketTimeout(); // Clear any existing timer
+
+  // Only set a new timer if the connection is supposed to be active
+  if (fetchingResponse.value && wsConnected.value) {
+    websocketTimeoutId = setTimeout(() => {
+      console.warn("WebSocket timeout reached.");
+      showSnackbar("服务器连接超时"); // Show snackbar first
+
+      // Update the last message if it's a bot message
+      if (props.conversation.messages.length > 0) {
+        const lastMessage =
+          props.conversation.messages[props.conversation.messages.length - 1];
+        if (lastMessage.is_bot) {
+          // Use nextTick to ensure UI updates before potential abort delays
+          nextTick(() => {
+            lastMessage.message = "服务器繁忙，请稍后重试";
+          });
+        }
+      }
+
+      // Close the connection with a specific reason
+      abortFetch(1001, "WebSocket timeout");
+    }, WEBSOCKET_TIMEOUT_DURATION);
+  }
+};
+
 // WebSocket 变量
 const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
@@ -150,13 +188,17 @@ const setupWebSocket = (sessionId: string) => {
   // 确保携带cookie (WebSocket默认会带上同源的cookie)
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
 
+  // 定义标记常量
+  const START_MARKER = "$$$$$$$$$$";
+  const END_MARKER = "##########";
+
   // WebSocket事件处理
   ws.value.onopen = () => {
     wsConnected.value = true;
     console.log("WebSocket connected");
+    resetWebsocketTimeout(); // Start the timer when connection opens
 
-    // 添加空的机器人消息，等待填充
-    // 安全地检查消息数组
+    // 添加空的机器人消息... (rest of onopen)
     if (props.conversation.messages.length === 0) {
       props.conversation.messages.push({ id: null, is_bot: true, message: "" });
     } else if (
@@ -168,90 +210,76 @@ const setupWebSocket = (sessionId: string) => {
   };
 
   ws.value.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log("WebSocket message received:", data);
+    resetWebsocketTimeout(); // Reset timer on any message received
 
-      // 处理不同类型的消息
-      if (data.type === "content") {
-        // 确保内容是有效的字符串
-        const content =
-          typeof data.content === "string"
-            ? data.content
-            : data.content?.toString() || "";
+    const messageData =
+      typeof event.data === "string" ? event.data : event.data.toString();
+    console.log("WebSocket raw message received:", messageData);
 
-        // 添加内容到消息队列
-        messageQueue.push(data.content);
-        processMessageQueue();
-        scrollChatWindow();
-      } else if (data.type === "error") {
-        showSnackbar(data.message || "Error occurred");
-        abortFetch();
-      } else if (data.type === "done") {
-        // 消息完成
-        abortFetch();
-        if (data.message_id) {
-          props.conversation.messages[
-            props.conversation.messages.length - 1
-          ].id = data.message_id;
-        }
-      }
-    } catch (e) {
-      console.error("Failed to parse WebSocket message", e);
-      // 尝试显示原始消息
-      try {
-        const rawContent =
-          typeof event.data === "string"
-            ? event.data
-            : event.data?.toString() || "";
-
-        if (rawContent) {
-          messageQueue.push(rawContent);
-          processMessageQueue();
-        }
-      } catch (err) {
-        console.error("Could not process raw message:", err);
-      }
+    if (messageData === START_MARKER) {
+      console.log("Received start marker.");
+    } else if (messageData === END_MARKER) {
+      console.log("Received end marker.");
+      // Close normally, abortFetch will clear the timer
+      abortFetch(1000, "Client received end marker");
+    } else {
+      messageQueue.push(messageData);
+      processMessageQueue();
+      scrollChatWindow();
     }
   };
 
   ws.value.onerror = (error) => {
+    clearWebsocketTimeout(); // Clear timer on error
     console.error("WebSocket error:", error);
     wsConnected.value = false;
     showSnackbar("WebSocket connection error");
-    abortFetch();
+    abortFetch(1006, "WebSocket error occurred");
   };
 
   ws.value.onclose = (event) => {
+    clearWebsocketTimeout(); // Clear timer on close
     wsConnected.value = false;
     console.log(
       `WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`
     );
 
-    // 如果是异常关闭，显示提示
     if (event.code !== 1000) {
-      showSnackbar(
-        `Connection closed unexpectedly (${event.code}). Please try again.`
-      );
+      // Avoid showing "unexpectedly closed" if it was due to timeout (code 1001)
+      if (event.code !== 1001 || event.reason !== "WebSocket timeout") {
+        showSnackbar(
+          `Connection closed unexpectedly (${event.code}). Please try again.`
+        );
+      }
     }
+    fetchingResponse.value = false;
   };
 };
 
 // 修改终止函数，同时处理HTTP请求和WebSocket
 let ctrl: any;
-const abortFetch = () => {
+const abortFetch = (
+  closeCode: number = 1001,
+  closeReason: string = "User aborted"
+) => {
+  clearWebsocketTimeout(); // Clear timer when aborting
+
   if (ctrl) {
     ctrl.abort();
+    ctrl = null;
   }
 
-  // 关闭WebSocket连接
   if (ws.value && wsConnected.value) {
-    ws.value.close();
+    console.log(
+      `abortFetch explicitly closing WebSocket with code ${closeCode}.`
+    );
+    ws.value.close(closeCode, closeReason);
     wsConnected.value = false;
   }
 
   fetchingResponse.value = false;
 };
+
 // 发送对话，获取请求
 const fetchReply = async (message: any) => {
   // 创建 AbortController 用于取消 HTTP 请求
