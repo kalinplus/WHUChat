@@ -444,6 +444,56 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- 渲染聊天气泡部分 -->
+  <div v-if="conversation">
+    <div v-if="conversation.loadingMessages" class="text-center">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+    <div v-else>
+      <div v-if="conversation.messages" ref="chatWindow">
+        <v-container>
+          <v-row>
+            <v-col
+              v-for="(message, index) in conversation.messages"
+              :key="index"
+              cols="12"
+            >
+              <div
+                class="d-flex align-center"
+                :class="message.is_bot ? 'justify-start' : 'justify-end'"
+              >
+                <MessageActions
+                  v-if="!message.is_bot"
+                  :message="message"
+                  :message-index="index"
+                  :use-prompt="usePrompt"
+                  :delete-message="deleteMessage"
+                  :toggle-message="toggleMessage"
+                />
+                <MsgContent
+                  :message="message"
+                  :index="index"
+                  :use-prompt="usePrompt"
+                  :delete-message="deleteMessage"
+                />
+                <MessageActions
+                  v-if="message.is_bot"
+                  :message="message"
+                  :message-index="index"
+                  :use-prompt="usePrompt"
+                  :delete-message="deleteMessage"
+                />
+              </div>
+            </v-col>
+          </v-row>
+        </v-container>
+
+        <div ref="grab" class="w-100" style="height: 200px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部发消息、选配置部分 -->
   <v-footer app class="footer">
     <v-card flat width="100%" class="message-control-panel pa-3">
       <div class="d-flex flex-column">
