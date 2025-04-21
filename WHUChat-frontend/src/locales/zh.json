@@ -112,5 +112,6 @@
   "clickToSignIn": "点击登录",
   "guest": "游客",
   "selectModel": "模型选择",
-  "close": "关闭"
+  "close": "关闭",
+  "loadingHistoryMessages": "加载历史消息......"
 }

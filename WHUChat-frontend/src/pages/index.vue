@@ -13,108 +13,11 @@ const route = useRoute();
 const router = useRouter();
 
 const conversation = ref<{
-  id: number | null;
+  id: number | null;  // 当前选择的会话的 id
   messages: any[];
   [key: string]: any;
 }>(getDefaultConversationData());
 const routerParams = route.params as { id?: number };
-
-// Mock data for conversations and messages
-// const mockConversations = {
-//   conv1: {
-//     id: "conv1",
-//     topic: "Introduction to AI",
-//     createdAt: new Date().toISOString(),
-//     updatedAt: new Date().toISOString(),
-//   },
-//   conv2: {
-//     id: "conv2",
-//     topic: "JavaScript Basics",
-//     createdAt: new Date().toISOString(),
-//     updatedAt: new Date().toISOString(),
-//   },
-//   conv3: {
-//     id: "conv3",
-//     topic: "Vue.js Development",
-//     createdAt: new Date().toISOString(),
-//     updatedAt: new Date().toISOString(),
-//   },
-// };
-
-// const mockMessages = {
-//   conv1: [
-//     {
-//       id: "msg1",
-//       content: "Hello! How can I help you learn about AI?",
-//       role: "assistant",
-//       conversationId: "conv1",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg2",
-//       content: "I'd like to understand the basics of machine learning.",
-//       role: "user",
-//       conversationId: "conv1",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg3",
-//       content:
-//         "Machine learning is a branch of AI that focuses on building systems that learn from data...",
-//       role: "assistant",
-//       conversationId: "conv1",
-//       createdAt: new Date().toISOString(),
-//     },
-//   ],
-//   conv2: [
-//     {
-//       id: "msg4",
-//       content: "What would you like to know about JavaScript?",
-//       role: "assistant",
-//       conversationId: "conv2",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg5",
-//       content: "Can you explain promises?",
-//       role: "user",
-//       conversationId: "conv2",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg6",
-//       content:
-//         "Promises in JavaScript are objects representing the eventual completion or failure of an asynchronous operation...",
-//       role: "assistant",
-//       conversationId: "conv2",
-//       createdAt: new Date().toISOString(),
-//     },
-//   ],
-//   conv3: [
-//     {
-//       id: "msg7",
-//       content: "Welcome to Vue.js! What would you like to discuss?",
-//       role: "assistant",
-//       conversationId: "conv3",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg8",
-//       content: "How do I use the Composition API?",
-//       role: "user",
-//       conversationId: "conv3",
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "msg9",
-//       content:
-//         "The Composition API is a set of APIs that allows you to write Vue components using imported functions instead of declaring options...",
-//       role: "assistant",
-//       conversationId: "conv3",
-//       createdAt: new Date().toISOString(),
-//     },
-//   ],
-// };
 
 // TODO: 每个对话的标识url存在params的id里
 const loadConversation = async () => {

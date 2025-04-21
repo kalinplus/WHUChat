@@ -104,5 +104,6 @@
   "guest": "guest",
   "clickToSignIn": "Click To Sign In",
   "selectModel": "Select Model",
-  "close": "Close"
+  "close": "Close",
+  "loadingHistoryMessages": "Loading History Messages......"
 }

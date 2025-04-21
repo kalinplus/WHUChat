@@ -1,16 +1,11 @@
 <script setup lang="ts">
-// import {
-//   EventStreamContentType,
-//   fetchEventSource,
-// } from "@microsoft/fetch-event-source";
 
-// TODO: 将 fetch-event-source 改为 http 的某个流式传输
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
 import { addConversation } from "@/utils/helper";
-import ModelSelector from "./ModelSelector.vue"; // 稍后创建这个组件
+import ModelSelector from "./ModelSelector.vue"; // TODO: 稍后创建这个组件
 import type {
   PromptMessage,
   ChatParameters,
@@ -296,6 +291,7 @@ const fetchReply = async (message: any) => {
     role: m.message_type === "image" ? "image" : "user",
     content: m.content,
   }));
+  // TODO: 对于新页面和首次对话（创建新会话），传给后端的请求有所不同。不知道这里解决没有
   // 构建请求参数
   const requestData: ChatRequestData = {
     uuid: stateStore.user?.id, // 用户ID
@@ -416,11 +412,6 @@ const usePrompt = (prompt: string) => {
 const deleteMessage = (index: number) => {
   props.conversation.messages.splice(index, 1);
 };
-// FIXME: 很遗憾，我们的数据库设计中根本没有切换消息启用/禁用状态的项，所以注释了
-// const toggleMessage = (index: number) => {
-//   props.conversation.messages[index].is_disabled =
-//     !props.conversation.messages[index].is_disabled;
-// };
 
 // 处理模型选择
 const handleModelSelect = (model: any) => {
@@ -432,15 +423,117 @@ const handleModelSelect = (model: any) => {
   showModelSelector.value = false;
 };
 
-// onMounted(() => {
-//   currentModel.value = getCurrentModel();
-// });
-
 onUnmounted(() => {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     ws.value.close();
   }
 });
+
+// 加载会话历史消息
+// TODO: 返回的messages存在问题
+const loadConversationHistory = async () => {
+  // 如果没有会话ID，则不需要加载历史
+  if (!props.conversation.id) return;
+
+  try {
+    // 设置加载状态
+    props.conversation.loadingMessages = true;
+
+    // 清空现有消息，避免污染
+    props.conversation.messages = [];
+
+    // 构建请求数据
+    const requestData = {
+      uuid: stateStore.user?.id || 0, // 使用真实用户ID或测试ID
+      session_id: props.conversation.id
+    };
+
+    // 发送请求获取历史消息
+    // FIXME: 测试用 URL
+    const response = await fetch(
+      "http://localhost:886/api/v1/chat/browse_messages",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+
+    // 检查是否有错误
+    if (responseData.error) {
+      throw new Error(`API error: ${responseData.error}`);
+    }
+
+    // 处理返回的消息，转换为组件需要的格式
+    if (responseData.messages && Array.isArray(responseData.messages)) {
+      // 根据接口文档返回的数据结构处理成我们需要的消息格式
+      const formattedMessages = responseData.messages.map((msg: any) => {
+        // 假设每个消息对象包含prompt数组，需要转换为我们的消息格式
+        if (msg.prompt && Array.isArray(msg.prompt)) {
+          // TODO: 返回的 messages 的结构需要修改和确认，和后端沟通修改
+          // 处理用户发送的消息
+          const userMessages = msg.prompt.map((p: any) => ({
+            id: null, // 或者使用适当的ID
+            is_bot: false, // 用户消息
+            message: p.content,
+            message_type: p.role === "image" ? "image" : "text",
+          }));
+
+          // 如果有bot的回复，也添加进来
+          // 注意：接口文档没有明确说明bot回复的字段，可能需要调整
+          if (msg.response) {
+            userMessages.push({
+              id: null,
+              is_bot: true,
+              message: msg.response,
+              message_type: "text",
+            });
+          }
+
+          return userMessages;
+        }
+        return [];
+      });
+
+      // 扁平化消息数组并添加到conversation
+      props.conversation.messages = formattedMessages.flat();
+    }
+
+    // 完成加载
+    props.conversation.loadingMessages = false;
+
+    // 滚动到底部
+    nextTick(() => {
+      scrollChatWindow();
+    });
+  } catch (error: any) {
+    console.error("Failed to load conversation history:", error);
+    showSnackbar(`加载历史消息失败: ${error.message}`);
+    props.conversation.loadingMessages = false;
+    // 确保即使出错也清空了消息，避免显示旧会话的内容
+    props.conversation.messages = [];
+  }
+};
+
+// 监听会话ID变化
+watch(
+  () => props.conversation.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      // 当会话ID变化时，加载新的历史消息
+      loadConversationHistory();
+    }
+  },
+  { immediate: true } // 组件挂载时也执行一次
+);
 </script>
 
 <template>
@@ -448,6 +541,7 @@ onUnmounted(() => {
   <div v-if="conversation">
     <div v-if="conversation.loadingMessages" class="text-center">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
+      <div class="mt-2">{{ $t('loadingHistoryMessages') }}</div>
     </div>
     <div v-else>
       <div v-if="conversation.messages" ref="chatWindow">
