@@ -137,7 +137,7 @@ const setupWebSocket = (sessionId: string) => {
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
   // FIXME: 测试用 ws URL
-  const wsUrl = `ws://localhost:3000/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
+  const wsUrl = `ws://localhost:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
     stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     currentModel.value.model_id || "claude-3-haiku"
@@ -298,7 +298,7 @@ const fetchReply = async (message: any) => {
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
     const response = await fetch(
-      "http://localhost:3000/api/v1/chat/send_message",
+      "http://localhost:886/api/v1/chat/send_message",
       {
         // const response = await fetch("/api/v1/chat/send_message", {
         signal: ctrl.signal,
