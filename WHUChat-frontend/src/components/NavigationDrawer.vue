@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// TODO: 需要新增接口
 import { onMounted } from "vue";
 import { useDisplay, useTheme } from "vuetify";
 import { useI18n } from "vue-i18n";
@@ -134,6 +135,7 @@ const showSnackbar = (text: string) => {
   snackbar.value = true;
 };
 
+// TODO: 这个的api要换成我们的
 const loadMessage = async (conversation_id: number) => {
   const { data, error } = await useAuthFetch(
     `/api/chat/messages/?conversationId=${conversation_id}`
@@ -178,51 +180,52 @@ const exportConversation = async (index: number) => {
   document.body.removeChild(element);
 };
 
-const openImportFileChooser = async () => {
-  let input_element = document.getElementById("import_conversation_input");
-  input_element?.click();
-};
+// FIXME: 导入会话也可以先不考虑
+// const openImportFileChooser = async () => {
+//   let input_element = document.getElementById("import_conversation_input");
+//   input_element?.click();
+// };
 
-const importConversation = async () => {
-  let input_element = document.getElementById(
-    "import_conversation_input"
-  ) as HTMLInputElement;
-  let fileHandles = input_element?.files;
-  let imports = [];
-  const reader = new FileReader();
-  for (let handle of fileHandles as any) {
-    let content = await new Promise((resolve, reject) => {
-      reader.readAsText(handle);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-    let json = JSON.parse(content as string);
-    imports.push(json);
-  }
-  let new_conversation_ids = [];
-  try {
-    const { data, error } = await useAuthFetch("/api/upload_conversations/", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        imports: imports,
-      }),
-    });
-    if (!error.value) {
-      new_conversation_ids = data.value as any[];
-      loadConversations();
-    } else {
-      console.log(error.value);
-      showSnackbar(error.value.message);
-    }
-  } catch (err: any) {
-    console.log(err.message);
-    showSnackbar(err.message);
-  }
-};
+// const importConversation = async () => {
+//   let input_element = document.getElementById(
+//     "import_conversation_input"
+//   ) as HTMLInputElement;
+//   let fileHandles = input_element?.files;
+//   let imports = [];
+//   const reader = new FileReader();
+//   for (let handle of fileHandles as any) {
+//     let content = await new Promise((resolve, reject) => {
+//       reader.readAsText(handle);
+//       reader.onload = () => resolve(reader.result);
+//       reader.onerror = (error) => reject(error);
+//     });
+//     let json = JSON.parse(content as string);
+//     imports.push(json);
+//   }
+//   let new_conversation_ids = [];
+//   try {
+//     const { data, error } = await useAuthFetch("/api/upload_conversations/", {
+//       method: "POST",
+//       headers: {
+//         accept: "application/json",
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         imports: imports,
+//       }),
+//     });
+//     if (!error.value) {
+//       new_conversation_ids = data.value as any[];
+//       loadConversations();
+//     } else {
+//       console.log(error.value);
+//       showSnackbar(error.value.message);
+//     }
+//   } catch (err: any) {
+//     console.log(err.message);
+//     showSnackbar(err.message);
+//   }
+// };
 
 // 清空所有会话并不是一个常见的需求
 // const clearConversations = async () => {
@@ -485,14 +488,14 @@ const openSettings = () => {};
       </v-btn>
     </template>
   </v-snackbar>
-  <input
+  <!-- <input
     type="file"
     id="import_conversation_input"
     style="display: none"
     accept="text/plain, text/json"
     multiple
     @change="importConversation"
-  />
+  /> -->
 </template>
 
 <style scoped>
