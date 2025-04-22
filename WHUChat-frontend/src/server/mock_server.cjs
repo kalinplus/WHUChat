@@ -15,13 +15,82 @@ app.get("/", (req, res) => {
   res.send("Mock server is alive!");
 });
 
-// 模拟HTTP POST响应
+// 模拟回应用户对话的HTTP POST响应
 app.post("/api/v1/chat/send_message", (req, res) => {
   console.log("Received request:", req.body);
 
   // 返回一个模拟的session_id
   res.json({
     session_id: "12345",
+  });
+});
+
+// 模拟获取一个会话内所有历史对话的HTTP POST响应
+app.post("/api/v1/chat/browse_messages", (req, res) => {
+  // 测试接口能正常连接
+  console.log("Received request for /api/v1/chat/browse_messages:", req.body);
+  const { uuid, session_id } = req.body;
+  // 简单验证
+  if (uuid === null || session_id === undefined || session_id === null) {
+    console.log("Missing uuid or session_id"); // 尽管不可能
+    return res
+      .status(400)
+      .json({ error: 2003, message: "Missing uuid or session_id" });
+  }
+  // 模拟不同会话返回不同历史记录
+  let mockMessages = [];
+  if (uuid === 0 && session_id === 1) {
+    mockMessages = [
+      {
+        uuid: 0,
+        session_id: 1,
+        is_bot: false, // 用户消息
+        prompt: [{ type: "text", content: "你好，这是一个历史消息。" }],
+        model_id: null,
+        model_class: null,
+        // 其他字段根据需要添加，如 parameters (如果后端存储了)
+      },
+      {
+        uuid: 0,
+        session_id: 1,
+        is_bot: true, // 机器人消息
+        prompt: [
+          { type: "text", content: "是的，我是历史记录中的机器人回复。" },
+        ],
+        model_id: 3,
+        model_class: "anthropic",
+      },
+      {
+        uuid: 0,
+        session_id: 1,
+        is_bot: false,
+        prompt: [
+          {
+            type: "image",
+            content: { url: "https://via.placeholder.com/150/92c952" },
+          }, // 模拟图片
+          { type: "text", content: "这是什么图片？(历史)" }, // 模拟图片+文字
+        ],
+        model_id: null,
+        model_class: null,
+      },
+      {
+        uuid: 0,
+        session_id: 1,
+        is_bot: true,
+        prompt: [{ type: "text", content: "这是一张占位符图片。(历史)" }],
+        model_id: 5,
+        model_class: "openai",
+      },
+    ];
+  } else {
+    mockMessages = [];
+  }
+
+  // 返回模拟的历史对话数据，结构依照文档
+  res.json({
+    error: 0,
+    messages: mockMessages
   });
 });
 

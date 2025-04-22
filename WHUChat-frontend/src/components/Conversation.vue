@@ -430,11 +430,17 @@ onUnmounted(() => {
 });
 
 // 加载会话历史消息
-// TODO: 返回的messages存在问题
 const loadConversationHistory = async () => {
   // 如果没有会话ID，则不需要加载历史
-  if (!props.conversation.id) return;
+  if (!props.conversation.id) {
+    console.log("No conversation ID, skipping history load.");
+    // Ensure messages are cleared if navigating from a previous conversation
+    props.conversation.messages = [];
+    props.conversation.loadingMessages = false; // Ensure loading state is reset
+    return;
+  }
 
+  console.log(`Loading history for session ID: ${props.conversation.id}`);
   try {
     // 设置加载状态
     props.conversation.loadingMessages = true;
@@ -444,79 +450,120 @@ const loadConversationHistory = async () => {
 
     // 构建请求数据
     const requestData = {
-      uuid: stateStore.user?.id || 0, // 使用真实用户ID或测试ID
-      session_id: props.conversation.id
+      // API文档说是int，但示例值是string，且之前的代码用了string。确认后端实际需要。
+      // 假设后端需要string或能处理string
+      uuid: stateStore.user?.id || 0, // 使用真实用户ID或默认值 0
+      session_id: props.conversation.id || 0
     };
 
     // 发送请求获取历史消息
-    // FIXME: 测试用 URL
+    // FIXME: 使用环境变量或配置管理基础 URL
+    const baseUrl = "http://localhost:886"; // 或者从配置读取
     const response = await fetch(
-      "http://localhost:886/api/v1/chat/browse_messages",
+      `${baseUrl}/api/v1/chat/browse_messages`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // 如果需要认证，添加 Authorization header
+          // 'Authorization': `Bearer ${your_token}`
         },
         body: JSON.stringify(requestData),
       }
     );
 
     if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
+      // Try to get error details from response body if possible
+      let errorBody = null;
+      try {
+        errorBody = await response.json();
+      } catch (e) { /* Ignore parsing error */ }
+      console.error("HTTP Error Response:", errorBody);
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
 
     const responseData = await response.json();
+    console.log("History Response Data:", responseData);
 
-    // 检查是否有错误
-    if (responseData.error) {
-      throw new Error(`API error: ${responseData.error}`);
+    // 检查后端返回的业务错误
+    // API文档示例是2002，但成功时是0？假设0是成功
+    if (responseData.error !== 0 && responseData.error !== undefined) {
+      throw new Error(`API error code: ${responseData.error}`);
     }
 
     // 处理返回的消息，转换为组件需要的格式
     if (responseData.messages && Array.isArray(responseData.messages)) {
-      // 根据接口文档返回的数据结构处理成我们需要的消息格式
-      const formattedMessages = responseData.messages.map((msg: any) => {
-        // 假设每个消息对象包含prompt数组，需要转换为我们的消息格式
-        if (msg.prompt && Array.isArray(msg.prompt)) {
-          // TODO: 返回的 messages 的结构需要修改和确认，和后端沟通修改
-          // 处理用户发送的消息
-          const userMessages = msg.prompt.map((p: any) => ({
-            id: null, // 或者使用适当的ID
-            is_bot: false, // 用户消息
-            message: p.content,
-            message_type: p.role === "image" ? "image" : "text",
-          }));
+      const formattedMessages = responseData.messages.map((backendMsg: any, index: number) => {
+        let messageContent = "";
+        let messageType = "text"; // Default to text
+        let imageUrl = null;
 
-          // 如果有bot的回复，也添加进来
-          // 注意：接口文档没有明确说明bot回复的字段，可能需要调整
-          if (msg.response) {
-            userMessages.push({
-              id: null,
-              is_bot: true,
-              message: msg.response,
-              message_type: "text",
-            });
+        // Process the prompt array to find text and image content
+        if (backendMsg.prompt && Array.isArray(backendMsg.prompt)) {
+          for (const part of backendMsg.prompt) {
+            if (part.type === "text" && part.content) {
+              messageContent = part.content; // Prioritize text content
+            }
+            if (part.type === "image" && part.content && part.content.url) {
+              imageUrl = part.content.url;
+              // If only image exists, set type to image
+              if (!messageContent) {
+                  messageType = "image";
+                  messageContent = imageUrl; // Use URL as content for image type
+              }
+            }
+            // If both text and image exist, current structure prioritizes text.
+            // If image should take precedence, adjust logic here.
           }
-
-          return userMessages;
         }
-        return [];
+
+        // Fallback if prompt processing yields no content (should ideally not happen)
+        if (!messageContent && !imageUrl) {
+            messageContent = "[Empty Message]";
+        }
+
+        // Create the frontend message object
+        return {
+          // API doesn't provide a unique message ID, using index as key fallback
+          // Consider asking backend to add a unique message_id field
+          id: backendMsg.message_id || `history-${index}`, // Use message_id if backend adds it
+          is_bot: backendMsg.is_bot === true, // Ensure boolean comparison
+          message: messageContent,
+          message_type: messageType,
+          // Optionally store model info if needed for display later
+          model_id: backendMsg.model_id,
+          model_class: backendMsg.model_class,
+        };
       });
 
-      // 扁平化消息数组并添加到conversation
-      props.conversation.messages = formattedMessages.flat();
+      // 更新 conversation 的 messages 数组
+      props.conversation.messages = formattedMessages;
+      console.log("Formatted Messages:", props.conversation.messages);
+
+      // 更新会话标题 (如果接口返回了)
+      // Assuming session_info might be added later based on previous discussion
+      if (responseData.session_info && responseData.session_info.topic) {
+        props.conversation.topic = responseData.session_info.topic;
+      }
+
+    } else {
+      console.log("No messages found in the response.");
+      props.conversation.messages = []; // Ensure messages array is empty
     }
 
     // 完成加载
     props.conversation.loadingMessages = false;
+    console.log("Finished loading history.");
 
     // 滚动到底部
     nextTick(() => {
       scrollChatWindow();
+      console.log("Scrolled chat window after history load.");
     });
+
   } catch (error: any) {
     console.error("Failed to load conversation history:", error);
-    showSnackbar(`加载历史消息失败: ${error.message}`);
+    showSnackbar(`加载历史消息失败: ${error.message || error}`);
     props.conversation.loadingMessages = false;
     // 确保即使出错也清空了消息，避免显示旧会话的内容
     props.conversation.messages = [];
@@ -527,12 +574,16 @@ const loadConversationHistory = async () => {
 watch(
   () => props.conversation.id,
   (newId, oldId) => {
-    if (newId && newId !== oldId) {
-      // 当会话ID变化时，加载新的历史消息
+    // Only load if the ID is valid and actually changed, or if it's the initial load with a valid ID
+    if (newId !== null && newId !== undefined && newId !== oldId) {
       loadConversationHistory();
+    } else if (newId === null && oldId !== null) {
+        // Handle case where user navigates to "new chat" (ID becomes null)
+        props.conversation.messages = [];
+        props.conversation.loadingMessages = false;
     }
   },
-  { immediate: true } // 组件挂载时也执行一次
+  { immediate: true } // 组件挂载时也执行一次, 会加载初始ID对应的历史
 );
 </script>
 

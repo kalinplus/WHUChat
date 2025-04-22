@@ -262,12 +262,6 @@ const loadConversations = async () => {
 
   // 使用 store 的方法更新状态
   stateStore.setConversations(conversationsData as any[]);
-  // 或者如果你想逐个添加
-  // stateStore.conversations = [];
-  // for (const conversation of conversationsData) {
-  //   stateStore.addConversation(conversation);
-  // }
-
   loadingConversations.value = false;
 };
 
