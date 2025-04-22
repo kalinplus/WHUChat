@@ -13,6 +13,8 @@ import { useAuthFetch, useMyFetch } from "@/composables/fetch";
 import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
+import type { ConversationInfo, ConversationsResponse } from "@/types/types";
+import { logout } from "@/utils/auth";
 
 const stateStore = useStateStore();
 
@@ -64,11 +66,6 @@ const feedback = () => {
   window.open("https://github.com/WongSaang/chatgpt-ui/issues", "_blank");
 };
 
-// const { locale, locales, setLocale } = useI18n()
-// const setLang = (lang) => {
-//   setLocale(lang)
-// }
-
 const conversations = useConversations();
 
 const editingConversation = ref();
@@ -119,6 +116,7 @@ const deleteConversation = async (index: number) => {
     }
   }
 };
+
 // 创建新对话函数
 const createNewConversation = () => {
   // 或方法2: 直接调用路由
@@ -226,51 +224,68 @@ const importConversation = async () => {
   }
 };
 
-const clearConversations = async () => {
-  deletingConversations.value = true;
-  const { data, error } = await useAuthFetch(
-    `/api/chat/conversations/delete_all`,
-    {
-      method: "DELETE",
-    }
-  );
-  if (!error.value) {
-    loadConversations();
-    clearConfirmDialog.value = false;
-  }
-  deletingConversations.value = false;
-};
+// 清空所有会话并不是一个常见的需求
+// const clearConversations = async () => {
+//   deletingConversations.value = true;
+//   const { data, error } = await useAuthFetch(
+//     `/api/chat/conversations/delete_all`,
+//     {
+//       method: "DELETE",
+//     }
+//   );
+//   if (!error.value) {
+//     loadConversations();
+//     clearConfirmDialog.value = false;
+//   }
+//   deletingConversations.value = false;
+// };
 
 const clearConfirmDialog = ref(false);
 const deletingConversations = ref(false);
 const loadingConversations = ref(false);
 
-// 如果 getConversations 还没有定义
-const getConversations = async () => {
-  const { data, error } = await useAuthFetch("/api/chat/conversations/");
-  if (!error.value) {
-    return data.value || [];
-  }
-  return [];
-};
-
 const loadConversations = async () => {
   loadingConversations.value = true;
 
-  // 获取对话列表
-  const conversationsData = await getConversations();
+  // 使用封装的 useAuthFetch
+  const { data, error, execute } = useAuthFetch<ConversationsResponse>(
+    "/api/chat/conversations/"
+  );
 
-  // 使用 store 的方法更新状态
-  stateStore.setConversations(conversationsData as any[]);
-  loadingConversations.value = false;
+  try {
+    await execute(); // 手动执行请求
+
+    // 只需要检查业务错误或通用错误
+    if (data.value && data.value.error !== 0) {
+      console.error("API Error:", data.value.error);
+      stateStore.setConversations([]);
+    } else if (error.value) {
+      // 401 错误已在 useAuthFetch 内部处理 (触发登出)
+      // 这里只需要处理其他类型的 fetch 错误
+      console.error("Fetch Error (non-401 or logout failed):", error.value);
+      stateStore.setConversations([]);
+    } else if (data.value) {
+      // 成功
+      stateStore.setConversations(data.value.sessions || []);
+    }
+  } catch (err) {
+    console.error("Error during fetch execution:", err);
+    stateStore.setConversations([]);
+  } finally {
+    loadingConversations.value = false;
+  }
 };
+
+onMounted(() => {
+  loadConversations();
+});
 
 const signOut = async () => {
   const { data, error } = await useMyFetch("/api/account/logout/", {
     method: "POST",
   });
   if (!error.value) {
-    // await logout()
+    await logout();
   }
 };
 

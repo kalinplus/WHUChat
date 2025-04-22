@@ -1,75 +1,97 @@
 import axios from 'axios';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import { useFetch, type BeforeFetchContext, type AfterFetchContext, type OnFetchErrorContext } from '@vueuse/core';
+import { logout, getToken } from '@/utils/auth';
 
 // 定义返回类型接口
 interface FetchReturn<T> {
   data: Ref<T | null>;
-  error: Ref<Error | null>;
+  error: Ref<any>;
   loading: Ref<boolean>;
-  execute: () => Promise<void>;
+  execute: (throwError?: boolean) => Promise<any>;
 }
 
-// 替代 useFetch 的自定义 hook
-export const useMyFetch = <T>(url: string, options: any = {}): FetchReturn<T> => {
-  const data = ref<T | null>(null) as Ref<T | null>;
-  const error = ref<Error | null>(null);
-  const loading = ref<boolean>(false);
-
-  // 默认选项
-  const defaultOptions = {
-    headers: {
-      Accept: 'application/json'
-    }
-  };
-
-  // 合并选项
-  const requestOptions = Object.assign({}, defaultOptions, options);
-
-  // 根据环境设置基础URL
+// 基础 Fetch 封装 (可选，如果非认证请求也需要统一处理 baseURL)
+export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
   const baseURL = import.meta.env.VITE_SERVER_DOMAIN || '';
+  const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`;
 
-  // 执行请求的函数
-  const execute = async (): Promise<void> => {
-    loading.value = true;
-    error.value = null;
-
-    try {
-      const response = await axios({
-        url,
-        baseURL,
-        ...requestOptions
-      });
-      data.value = response.data;
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-      console.error('Request error:', err);
-    } finally {
-      loading.value = false;
-    }
+  const defaultOptions: any = {
+    immediate: false, // Don't execute immediately
+    timeout: 30000,   // Default timeout
   };
 
-  // 立即执行请求（可选，取决于你的需求）
-  execute();
+  const fetchOptions = { ...defaultOptions, ...options };
+
+  const {
+    data,
+    error,
+    isFetching: loading,
+    execute,
+  } = useFetch<T>(fullUrl, fetchOptions).json<T>();
 
   return { data, error, loading, execute };
 };
 
-// 认证请求封装
-export const useAuthFetch = async <T>(url: string, options: any = {}): Promise<FetchReturn<T>> => {
-  const result = await useMyFetch<T>(url, options);
+// 认证请求封装 (主要修改在这里)
+export const useAuthFetch = <T>(url: string, options?: any): FetchReturn<T> => {
+  const baseURL = import.meta.env.VITE_SERVER_DOMAIN || '';
+  const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`;
 
-  // 检查认证错误
-  if (result.error.value && axios.isAxiosError(result.error.value) && result.error.value.response?.status === 401) {
-    // 调用登出函数
-    // 假设你有一个 auth.ts 文件导出了 logout 函数
-    try {
-      const { logout } = await import('@/utils/auth');
-      await logout();
-    } catch (err) {
-      console.error('Logout failed:', err);
+  const defaultOptions: any = {
+    immediate: false, // Don't execute immediately
+    timeout: 30000,   // Default timeout
+
+    // --- 认证和错误处理逻辑 ---
+    async beforeFetch({ options }: BeforeFetchContext) {
+      // 从你的认证逻辑中获取 token
+      const token = getToken(); // Implement getToken() in your auth utils
+      if (token) {
+        // 确保 headers 对象存在
+        options.headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${token}` // 或者你的认证方案
+        }
+      }
+      return { options };
+    },
+
+    onFetchError(ctx: OnFetchErrorContext): Partial<OnFetchErrorContext> | Promise<Partial<OnFetchErrorContext>> {
+      // ctx.data contains the response body if any
+      // ctx.error contains the Error object
+      // ctx.response contains the Response object
+      if (ctx.response?.status === 401) {
+        console.warn('Authentication error (401) detected by useAuthFetch.');
+        // 触发登出逻辑
+        try {
+          logout(); // Call your logout function
+          console.log('User logged out due to 401 error.');
+          // 可选: 重定向到登录页
+          // router.push('/login');
+        } catch (logoutErr) {
+          console.error('Logout failed after 401 error:', logoutErr);
+        }
+        // 可以选择取消进一步的错误处理或修改错误对象
+        // ctx.error = new Error('Session expired');
+      }
+      // 返回 ctx 继续默认错误处理，或返回 { error: null } 阻止 useFetch 设置 error ref
+      return ctx;
     }
-  }
+    // --- 结束认证和错误处理 ---
+  };
 
-  return result;
+  // 合并传入的 options，传入的 options 会覆盖 defaultOptions 中的同名配置 (除了 beforeFetch/onFetchError 等钩子，useFetch 会合并它们)
+  const fetchOptions = { ...defaultOptions, ...options };
+
+  // 使用 useFetch
+  const {
+    data,
+    error,
+    isFetching: loading,
+    execute,
+  } = useFetch<T>(fullUrl, fetchOptions).json<T>();
+
+  // 返回兼容的结构
+  return { data, error, loading, execute };
 };

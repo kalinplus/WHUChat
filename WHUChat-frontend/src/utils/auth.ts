@@ -21,3 +21,16 @@ export const isAuthenticated = () => {
   const stateStore = useStateStore();
   return !!stateStore.user;
 };
+
+export const getToken = () => {
+  return localStorage.getItem("auth_token");
+};
+
+// 你还需要一个函数在登录成功后设置 token
+/**
+ * 在登录成功后将认证令牌存储到 localStorage。
+ * @param {string} token - 从后端获取的认证令牌。
+ */
+export const setToken = (token: string): void => {
+  localStorage.setItem("auth_token", token);
+};

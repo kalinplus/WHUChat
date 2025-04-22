@@ -25,3 +25,15 @@ export interface ChatRequestData {
   URL?: string; // 可选的自定义模型调用网址
   api_key?: string; // 可选的自定义API密钥
 }
+
+// 定义期望的响应类型
+export interface ConversationInfo {
+  uuid: number;
+  id: number;
+  title: string;
+  updated_at: string;
+}
+export interface ConversationsResponse {
+  error: number;
+  sessions: ConversationInfo[];
+}
