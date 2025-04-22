@@ -39,7 +39,7 @@
               block
               @click="router.push('/register')"
             >
-              {{ t("Create your account") }}
+              {{ t("createAccount") }}
             </v-btn>
           </div>
         </v-form>
@@ -48,42 +48,97 @@
   </v-app>
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
-import type { VForm } from "vuetify/components"; // 添加类型声明
+import { ref, computed } from "vue";
+import type { VForm } from "vuetify/components";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthFetch } from "@/composables/fetch";
 
+// ======================
+// 依赖注入
+// ======================
 const router = useRouter();
 const { t } = useI18n();
 
+// ======================
+// 响应式状态声明
+// ======================
 const form = ref<InstanceType<typeof VForm>>();
 const checkbox = ref(false);
 const showAlert = ref(false);
-const alertMessage = ref("");
 const alertType = ref("error");
+const isLoading = ref(false);
+const loginResult = ref<LoginResult>();
+
+// ======================
+// 类型定义
+// ======================
+interface LoginResult {
+  uuid?: number;
+  error: number;
+}
+
+interface LoginForm {
+  password: string;
+  email: string;
+}
+
+// ======================
+// 表单配置
+// ======================
+const loginForm = ref<LoginForm>({
+  password: "",
+  email: "",
+});
 
 const emailRules = [
   (v: string) => !!v || t("Please enter your e-mail address"),
   (v: string) => /.+@.+\..+/.test(v) || t("E-mail address must be valid"),
 ];
 
-interface LoginForm {
-  password: string;
-  email: string; // 根据实际需求保留
-}
-const loginForm = ref<LoginForm>({
-  password: "",
-  email: "",
+// ======================
+// 错误处理配置
+// ======================
+const ERROR_CODES = {
+  0: t("Your login is successful"),
+  1009: t("Password is wrong"),
+  1010: t("The email address is not registered"),
+  "-1": t("The network connection is abnormal"),
+} as Record<number, string>;
+
+const alertMessage = computed(() => {
+  if (!loginResult.value) return "";
+  return (
+    ERROR_CODES[loginResult.value.error] ||
+    `未知错误 (代码: ${loginResult.value.error})`
+  );
 });
 
-const isLoading = ref(false);
+// ======================
+// 工具函数
+// ======================
+const parseCookies = () => {
+  return document.cookie
+    .split(";")
+    .reduce((cookies: Record<string, string>, cookie) => {
+      const [name, value] = cookie.trim().split("=");
+      cookies[name] = decodeURIComponent(value);
+      return cookies;
+    }, {});
+};
+
+// ======================
+// 核心逻辑
+// ======================
 const handleLogin = async () => {
   if (isLoading.value) return;
   if (!form.value) return;
+
   const { valid } = await form.value.validate();
   if (!valid) return;
+
   isLoading.value = true;
+
   try {
     const { data, error } = await useAuthFetch<{ uuid: number }>(
       "/api/v1/gate/login",
@@ -97,26 +152,28 @@ const handleLogin = async () => {
           email: loginForm.value.email,
           password: loginForm.value.password,
         }),
-        withCredentials: true, // 关键！允许携带cookie
+        withCredentials: true,
       }
     );
 
+    // 处理响应
     if (!error.value) {
-      handleLoginSuccess();
-      showAlert.value = true;
-      alertMessage.value = t("Your login is successful");
-      alertType.value = "success";
-    } else {
-      console.error("Login uuid:", data.value);
-      console.error("Login error:", error.value);
-      showAlert.value = true;
-      alertMessage.value = t("Your login failed");
-      alertType.value = "error";
+      loginResult.value = { error: -1 };
+      throw new Error();
     }
-    // 登录成功处理（由后端重定向）
+
+    const uuid = data.value?.uuid;
+    const axiosError = error.value as any;
+    const statusCode = axiosError.response?.status;
+    loginResult.value = { uuid, error: statusCode || -1 };
+
+    if (loginResult.value?.error === 0) {
+      handleLoginSuccess();
+    } else {
+      throw new Error(loginResult.value?.error.toString());
+    }
   } catch (err) {
     showAlert.value = true;
-    alertMessage.value = t("Your login failed");
     alertType.value = "error";
     console.error(err);
   } finally {
@@ -127,15 +184,25 @@ const handleLogin = async () => {
   }
 };
 
-// 成功处理（如果后端未自动重定向）
-const handleLoginSuccess = async () => {
-  // 检查是否已有重定向
+// ======================
+// 成功处理
+// ======================
+const handleLoginSuccess = () => {
+  // 检查重定向
   setTimeout(() => {
-    const str = window.location.pathname.toString();
-    if (str != "/") {
+    const path = window.location.pathname.toString();
+    if (path !== "/") {
       router.push("/");
     }
   }, 1000);
+
+  // 调试日志
+  const cookies = parseCookies();
+  console.log("Cookie:", cookies);
+
+  // 展示成功状态
+  showAlert.value = true;
+  alertType.value = "success";
 };
 </script>
 
