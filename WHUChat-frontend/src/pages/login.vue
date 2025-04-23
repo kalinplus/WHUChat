@@ -52,7 +52,7 @@ import { ref, computed } from "vue";
 import type { VForm } from "vuetify/components";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { useAuthFetch } from "@/composables/fetch";
+import request from "@/utils/request";
 
 // ======================
 // 依赖注入
@@ -140,37 +140,27 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-    const { data, error } = await useAuthFetch<{ uuid: number }>(
+    const result = await request.post(
       "/api/v1/gate/login",
-      {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: loginForm.value.email,
-          password: loginForm.value.password,
-        }),
-        withCredentials: true,
-      }
+      JSON.stringify({
+        email: loginForm.value.email,
+        password: loginForm.value.password,
+      }),
+      { withCredentials: true }
     );
 
     // 处理响应
-    if (!error.value) {
+    if (!result) {
       loginResult.value = { error: -1 };
       throw new Error();
-    }
-
-    const uuid = data.value?.uuid;
-    const axiosError = error.value as any;
-    const statusCode = axiosError.response?.status;
-    loginResult.value = { uuid, error: statusCode || -1 };
-
-    if (loginResult.value?.error === 0) {
-      handleLoginSuccess();
     } else {
-      throw new Error(loginResult.value?.error.toString());
+      loginResult.value = { uuid: result.uuid, error: result.error };
+      console.log(loginResult.value);
+      if (loginResult.value?.error === 0) {
+        handleLoginSuccess();
+      } else {
+        throw new Error();
+      }
     }
   } catch (err) {
     showAlert.value = true;
@@ -188,14 +178,6 @@ const handleLogin = async () => {
 // 成功处理
 // ======================
 const handleLoginSuccess = () => {
-  // 检查重定向
-  setTimeout(() => {
-    const path = window.location.pathname.toString();
-    if (path !== "/") {
-      router.push("/");
-    }
-  }, 1000);
-
   // 调试日志
   const cookies = parseCookies();
   console.log("Cookie:", cookies);
@@ -203,6 +185,14 @@ const handleLoginSuccess = () => {
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
+
+  // 检查重定向
+  setTimeout(() => {
+    const path = window.location.pathname.toString();
+    if (path !== "/") {
+      router.push("/");
+    }
+  }, 1000);
 };
 </script>
 

@@ -106,10 +106,8 @@ import { ref, computed, onBeforeUnmount } from "vue";
 import type { VForm } from "vuetify/components";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { useAuthFetch } from "@/composables/fetch";
 import CryptoJS from "crypto-js";
-import axios from "axios";
-
+import request from "@/utils/request";
 // ======================
 // 依赖注入
 // ======================
@@ -128,10 +126,10 @@ const IV = CryptoJS.enc.Utf8.parse("your-secret-iv-456"); // 16字节初始向�
 const form = ref<InstanceType<typeof VForm>>();
 const loading = ref(false);
 const showAlert = ref(false);
-const alertMessage = ref("");
 const alertType = ref("error");
 const showPassword = ref(false);
 const checkbox = ref(false);
+const errorCode = ref(0);
 
 // 验证码相关状态
 const countdown = ref(0);
@@ -212,11 +210,14 @@ const sendVrfCode = async () => {
 
   loadingForVrfcode.value = true;
   try {
-    const response = await axios.post("/api/v1/gate/send_vrf", {
+    const response = await request.post("/api/v1/gate/send_vrf", {
       email: formData.value.email,
     });
-
-    response.data.error ? handleError(response.data.error) : startCountdown();
+    if (response) {
+      response.error ? handleError(response.error) : startCountdown();
+    } else {
+      throw new Error();
+    }
   } catch (error) {
     showAlertForVrfcode.value = true;
     errorMessage.value = t("The network connection is abnormal");
@@ -262,6 +263,22 @@ onBeforeUnmount(() => {
 // 界面交互
 // ======================
 const retrunSignIn = () => router.push("/login");
+// ======================
+// 错误处理
+// ======================
+const ERROR_CODES = {
+  1005: "无法注册新用户：用户名已存在",
+  1006: "无法注册新用户：email已被注册",
+  1007: "无法注册新用户：密码不一致",
+  1008: "无法注册新用户：验证码无效",
+  "-1": t("The network connection is abnormal"),
+} as Record<number, string>;
+
+const alertMessage = computed(() => {
+  console.log(errorCode.value);
+  if (!errorCode.value) return t("Your registration is successful");
+  return ERROR_CODES[errorCode.value] || `未知错误 (代码: ${errorCode.value})`;
+});
 
 // ======================
 // 表单提交处理
@@ -285,31 +302,28 @@ const handleSubmit = async () => {
     };
     console.log(JSON.stringify(encryptedData));
     // 发送注册请求
-    const { data, error } = await useAuthFetch("/api/v1/gate/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      withCredentials: true, // 添加这一行来显式携带 cookie
-      body: JSON.stringify(encryptedData),
-    });
+    const result = await request.post(
+      "/api/v1/gate/register",
+      JSON.stringify(encryptedData)
+    );
 
     // 处理响应
-    if (!error.value && data.value) {
-      showAlert.value = true;
-      alertType.value = "success";
-      alertMessage.value = t("Your registration is successful");
-      form.value.reset();
-      setTimeout(() => router.push("/login"), 1000);
+    if (result) {
+      if (!result.error) {
+        showAlert.value = true;
+        alertType.value = "success";
+        form.value.reset();
+        setTimeout(() => router.push("/login"), 1000);
+      } else {
+        errorCode.value = result.error;
+        throw new Error();
+      }
     } else {
-      throw error.value;
+      errorCode.value = -1;
+      throw new Error();
     }
-  } catch (err: any) {
-    console.error(t("Your registration failed"));
+  } catch (err) {
     alertType.value = "error";
-    alertMessage.value =
-      err?.response?.data?.message || t("Your registration failed");
     showAlert.value = true;
   } finally {
     loading.value = false;
