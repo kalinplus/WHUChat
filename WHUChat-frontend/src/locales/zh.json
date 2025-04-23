@@ -91,8 +91,6 @@
       "item3": "对2024年以后的世界和事件了解有限"
     }
   },
-  
-  
   "edit": "编辑",
   "copy": "复制",
   "copied": "已复制", 
@@ -101,7 +99,6 @@
   "resetPassword": "重置密码",
   "submit": "提交",
   "agree": "同意",
-  
   
   "setApiKey": "API 密钥",
   "setOpenAIApiKey": "设置OpenAI的API密钥",
@@ -141,4 +138,11 @@
   "addPrompt": "Add prompt",
   "titlePrompt": "Title",
   "addNewPrompt": "Add a new prompt"
+}
+  "settings": "设置",
+  "clickToSignIn": "点击登录",
+  "guest": "游客",
+  "selectModel": "模型选择",
+  "close": "关闭",
+  "loadingHistoryMessages": "加载历史消息......"
 }

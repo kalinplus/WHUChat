@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// TODO: 需要新增接口
 import { onMounted } from "vue";
 import { useDisplay, useTheme } from "vuetify";
 import { useI18n } from "vue-i18n";
@@ -13,6 +14,8 @@ import { useAuthFetch, useMyFetch } from "@/composables/fetch";
 import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
+import type { ConversationInfo, ConversationsResponse } from "@/types/types";
+import { logout } from "@/utils/auth";
 
 const emit = defineEmits(["openSettings", "signOut"]);
 const stateStore = useStateStore();
@@ -65,11 +68,6 @@ const feedback = () => {
   window.open("https://github.com/WongSaang/chatgpt-ui/issues", "_blank");
 };
 
-// const { locale, locales, setLocale } = useI18n()
-// const setLang = (lang) => {
-//   setLocale(lang)
-// }
-
 const conversations = useConversations();
 
 const editingConversation = ref();
@@ -120,6 +118,7 @@ const deleteConversation = async (index: number) => {
     }
   }
 };
+
 // 创建新对话函数
 const createNewConversation = () => {
   // 或方法2: 直接调用路由
@@ -137,6 +136,7 @@ const showSnackbar = (text: string) => {
   snackbar.value = true;
 };
 
+// TODO: 这个的api要换成我们的
 const loadMessage = async (conversation_id: number) => {
   const { data, error } = await useAuthFetch(
     `/api/chat/messages/?conversationId=${conversation_id}`
@@ -181,103 +181,115 @@ const exportConversation = async (index: number) => {
   document.body.removeChild(element);
 };
 
-const openImportFileChooser = async () => {
-  let input_element = document.getElementById("import_conversation_input");
-  input_element?.click();
-};
+// FIXME: 导入会话也可以先不考虑
+// const openImportFileChooser = async () => {
+//   let input_element = document.getElementById("import_conversation_input");
+//   input_element?.click();
+// };
 
-const importConversation = async () => {
-  let input_element = document.getElementById(
-    "import_conversation_input"
-  ) as HTMLInputElement;
-  let fileHandles = input_element?.files;
-  let imports = [];
-  const reader = new FileReader();
-  for (let handle of fileHandles as any) {
-    let content = await new Promise((resolve, reject) => {
-      reader.readAsText(handle);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-    let json = JSON.parse(content as string);
-    imports.push(json);
-  }
-  let new_conversation_ids = [];
-  try {
-    const { data, error } = await useAuthFetch("/api/upload_conversations/", {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        imports: imports,
-      }),
-    });
-    if (!error.value) {
-      new_conversation_ids = data.value as any[];
-      loadConversations();
-    } else {
-      console.log(error.value);
-      showSnackbar(error.value.message);
-    }
-  } catch (err: any) {
-    console.log(err.message);
-    showSnackbar(err.message);
-  }
-};
+// const importConversation = async () => {
+//   let input_element = document.getElementById(
+//     "import_conversation_input"
+//   ) as HTMLInputElement;
+//   let fileHandles = input_element?.files;
+//   let imports = [];
+//   const reader = new FileReader();
+//   for (let handle of fileHandles as any) {
+//     let content = await new Promise((resolve, reject) => {
+//       reader.readAsText(handle);
+//       reader.onload = () => resolve(reader.result);
+//       reader.onerror = (error) => reject(error);
+//     });
+//     let json = JSON.parse(content as string);
+//     imports.push(json);
+//   }
+//   let new_conversation_ids = [];
+//   try {
+//     const { data, error } = await useAuthFetch("/api/upload_conversations/", {
+//       method: "POST",
+//       headers: {
+//         accept: "application/json",
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         imports: imports,
+//       }),
+//     });
+//     if (!error.value) {
+//       new_conversation_ids = data.value as any[];
+//       loadConversations();
+//     } else {
+//       console.log(error.value);
+//       showSnackbar(error.value.message);
+//     }
+//   } catch (err: any) {
+//     console.log(err.message);
+//     showSnackbar(err.message);
+//   }
+// };
 
-const clearConversations = async () => {
-  deletingConversations.value = true;
-  const { data, error } = await useAuthFetch(
-    `/api/chat/conversations/delete_all`,
-    {
-      method: "DELETE",
-    }
-  );
-  if (!error.value) {
-    loadConversations();
-    clearConfirmDialog.value = false;
-  }
-  deletingConversations.value = false;
-};
+// 清空所有会话并不是一个常见的需求
+// const clearConversations = async () => {
+//   deletingConversations.value = true;
+//   const { data, error } = await useAuthFetch(
+//     `/api/chat/conversations/delete_all`,
+//     {
+//       method: "DELETE",
+//     }
+//   );
+//   if (!error.value) {
+//     loadConversations();
+//     clearConfirmDialog.value = false;
+//   }
+//   deletingConversations.value = false;
+// };
 
 const clearConfirmDialog = ref(false);
 const deletingConversations = ref(false);
 const loadingConversations = ref(false);
 
-// 如果 getConversations 还没有定义
-const getConversations = async () => {
-  const { data, error } = await useAuthFetch("/api/chat/conversations/");
-  if (!error.value) {
-    return data.value || [];
-  }
-  return [];
-};
-
 const loadConversations = async () => {
   loadingConversations.value = true;
 
-  // 获取对话列表
-  const conversationsData = await getConversations();
+  // 使用封装的 useAuthFetch
+  const { data, error, execute } = useAuthFetch<ConversationsResponse>(
+    "/api/chat/conversations/"
+  );
 
-  // 使用 store 的方法更新状态
-  stateStore.setConversations(conversationsData as any[]);
-  // 或者如果你想逐个添加
-  // stateStore.conversations = [];
-  // for (const conversation of conversationsData) {
-  //   stateStore.addConversation(conversation);
-  // }
+  try {
+    await execute(); // 手动执行请求
 
-  loadingConversations.value = false;
+    // 只需要检查业务错误或通用错误
+    if (data.value && data.value.error !== 0) {
+      console.error("API Error:", data.value.error);
+      stateStore.setConversations([]);
+    } else if (error.value) {
+      // 401 错误已在 useAuthFetch 内部处理 (触发登出)
+      // 这里只需要处理其他类型的 fetch 错误
+      console.error("Fetch Error (non-401 or logout failed):", error.value);
+      stateStore.setConversations([]);
+    } else if (data.value) {
+      // 成功
+      stateStore.setConversations(data.value.sessions || []);
+    }
+  } catch (err) {
+    console.error("Error during fetch execution:", err);
+    stateStore.setConversations([]);
+  } finally {
+    loadingConversations.value = false;
+  }
 };
+
+onMounted(() => {
+  loadConversations();
+});
 
 const signOut = async () => {
   const { data, error } = await useMyFetch("/api/account/logout/", {
     method: "POST",
   });
   if (!error.value) {
-    // await logout()
+    await logout();
   }
 };
 
@@ -385,7 +397,7 @@ const settingDialog = ref(false);
           :key="conversation.id"
         >
           <v-list-item
-            active-color="primary"
+            base-color="primary"
             rounded="xl"
             v-if="
               editingConversation && editingConversation.id === conversation.id
@@ -411,7 +423,7 @@ const settingDialog = ref(false);
           >
             <v-list-item
               rounded="xl"
-              active-color="primary"
+              base-color="primary"
               :to="conversation.id ? `/${conversation.id}` : '/'"
               v-bind="props"
             >
@@ -476,14 +488,14 @@ const settingDialog = ref(false);
       </v-btn>
     </template>
   </v-snackbar>
-  <input
+  <!-- <input
     type="file"
     id="import_conversation_input"
     style="display: none"
     accept="text/plain, text/json"
     multiple
     @change="importConversation"
-  />
+  /> -->
 </template>
 
 <style scoped>

@@ -119,4 +119,7 @@
   "darkMode": "Dark Mode",
   "followSystem": "Follow system"
   }
+  "selectModel": "Select Model",
+  "close": "Close",
+  "loadingHistoryMessages": "Loading History Messages......"
 }

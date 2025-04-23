@@ -35,13 +35,24 @@ export const saveCurrentModel = (val: any) => {
   set(STORAGE_KEY.CURRENT_MODEL, val);
 };
 
-export const getCurrentModel = () => {
-  let model: string = get(STORAGE_KEY.CURRENT_MODEL) || MODELS[DEFAULT_MODEL_NAME]
-  // if (!model) {
-  //   model = MODELS[DEFAULT_MODEL_NAME];
-  // }
-  return model;
-};
+export function getCurrentModel() {
+  const defaultModel = {
+    id: "claude-3-haiku",
+    name: "Claude 3 Haiku",
+    description: "Anthropic Claude 3 Haiku",
+    logo: "/models/anthropic.png",
+    model_id: "claude-3-haiku",    // 接口要求的字段
+    model_class: "anthropic",      // 接口要求的字段
+  };
+
+  try {
+    const storedModel = localStorage.getItem('currentModel');
+    return storedModel ? JSON.parse(storedModel) : defaultModel;
+  } catch (e) {
+    console.error('Error loading current model', e);
+    return defaultModel;
+  }
+}
 
 export const setApiKey = (val: any) => {
   const apiKey: any = getStoredApiKey();

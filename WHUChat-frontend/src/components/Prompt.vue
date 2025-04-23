@@ -126,7 +126,7 @@ onMounted(() => {
             </v-list-item>
             <template v-for="(prompt, idx) in prompts" :key="prompt.id">
               <v-list-item
-                active-color="primary"
+                base-color="primary"
                 v-if="editingPrompt && editingPrompt.id === prompt.id"
               >
                 <div class="d-flex flex-row" :style="{ marginTop: '5px' }">
@@ -169,7 +169,7 @@ onMounted(() => {
               <v-list-item
                 v-if="!editingPrompt || editingPrompt.id !== prompt.id"
                 rounded="xl"
-                active-color="primary"
+                base-color="primary"
                 @click="selectPrompt(prompt)"
               >
                 <v-list-item-title>{{
@@ -191,7 +191,7 @@ onMounted(() => {
               </v-list-item>
             </template>
 
-            <v-list-item active-color="primary">
+            <v-list-item base-color="primary">
               <div class="pt-3">
                 <v-text-field
                   rows="1"
@@ -206,7 +206,7 @@ onMounted(() => {
               </div>
             </v-list-item>
 
-            <v-list-item active-color="primary">
+            <v-list-item base-color="primary">
               <div class="pt-3">
                 <v-textarea
                   rows="2"

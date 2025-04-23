@@ -14,7 +14,7 @@ import router from "./router";
 import { createVuetify } from "vuetify";
 import enMessages from "./locales/en.json";
 import zhMessages from "./locales/zh.json";
-import '@mdi/font/css/materialdesignicons.css'
+import "@mdi/font/css/materialdesignicons.css";
 
 const i18n = createI18n({
   legacy: false, // 使用组合式API
@@ -26,13 +26,10 @@ const i18n = createI18n({
   },
 });
 
-const vuetify = createVuetify();
 const app = createApp(App);
-
-registerPlugins(app);
-app.use(router);
-app.use(vuetify);
 app.use(i18n);
 
+// 注册所有插件
+registerPlugins(app);
 
 app.mount("#app");
