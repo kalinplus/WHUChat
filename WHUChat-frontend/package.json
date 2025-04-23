@@ -20,6 +20,7 @@
     "copy-to-clipboard": "^3.3.3",
     "core-js": "^3.37.1",
     "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
     "express": "^5.1.0",
     "highlight.js": "^11.11.1",
     "is-mobile": "^5.0.0",

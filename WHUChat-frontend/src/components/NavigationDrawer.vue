@@ -228,23 +228,6 @@ const exportConversation = async (index: number) => {
 //   }
 // };
 
-// 清空所有会话并不是一个常见的需求
-// const clearConversations = async () => {
-//   deletingConversations.value = true;
-//   const { data, error } = await useAuthFetch(
-//     `/api/chat/conversations/delete_all`,
-//     {
-//       method: "DELETE",
-//     }
-//   );
-//   if (!error.value) {
-//     loadConversations();
-//     clearConfirmDialog.value = false;
-//   }
-//   deletingConversations.value = false;
-// };
-
-const clearConfirmDialog = ref(false);
 const deletingConversations = ref(false);
 const loadingConversations = ref(false);
 
@@ -253,7 +236,7 @@ const loadConversations = async () => {
 
   // 使用封装的 useAuthFetch
   const { data, error, execute } = useAuthFetch<ConversationsResponse>(
-    "/api/chat/conversations/"
+    "/api/v1/chat/history"
   );
 
   try {

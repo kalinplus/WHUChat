@@ -8,12 +8,11 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppBar: typeof import('./components/AppBar.vue')['default']
-    ContactUs: typeof import('./components/ContactUs.vue')['default']
-    MsgAlert: typeof import('./components/MsgAlert.vue')['default']
+    Conversation: typeof import('./components/Conversation.vue')['default']
     DocumentsManage: typeof import('./components/DocumentsManage.vue')['default']
-    HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     MessageActions: typeof import('./components/MessageActions.vue')['default']
     ModelSelector: typeof import('./components/ModelSelector.vue')['default']
+    MsgAlert: typeof import('./components/MsgAlert.vue')['default']
     MsgContent: typeof import('./components/MsgContent.vue')['default']
     MsgEditor: typeof import('./components/MsgEditor.vue')['default']
     NavigationDrawer: typeof import('./components/NavigationDrawer.vue')['default']

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
@@ -453,31 +452,30 @@ const loadConversationHistory = async () => {
       // API文档说是int，但示例值是string，且之前的代码用了string。确认后端实际需要。
       // 假设后端需要string或能处理string
       uuid: stateStore.user?.id || 0, // 使用真实用户ID或默认值 0
-      session_id: props.conversation.id || 0
+      session_id: props.conversation.id || 0,
     };
 
     // 发送请求获取历史消息
     // FIXME: 使用环境变量或配置管理基础 URL
     const baseUrl = "http://localhost:886"; // 或者从配置读取
-    const response = await fetch(
-      `${baseUrl}/api/v1/chat/browse_messages`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // 如果需要认证，添加 Authorization header
-          // 'Authorization': `Bearer ${your_token}`
-        },
-        body: JSON.stringify(requestData),
-      }
-    );
+    const response = await fetch(`${baseUrl}/api/v1/chat/browse_messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // 如果需要认证，添加 Authorization header
+        // 'Authorization': `Bearer ${your_token}`
+      },
+      body: JSON.stringify(requestData),
+    });
 
     if (!response.ok) {
       // Try to get error details from response body if possible
       let errorBody = null;
       try {
         errorBody = await response.json();
-      } catch (e) { /* Ignore parsing error */ }
+      } catch (e) {
+        /* Ignore parsing error */
+      }
       console.error("HTTP Error Response:", errorBody);
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
@@ -493,48 +491,50 @@ const loadConversationHistory = async () => {
 
     // 处理返回的消息，转换为组件需要的格式
     if (responseData.messages && Array.isArray(responseData.messages)) {
-      const formattedMessages = responseData.messages.map((backendMsg: any, index: number) => {
-        let messageContent = "";
-        let messageType = "text"; // Default to text
-        let imageUrl = null;
+      const formattedMessages = responseData.messages.map(
+        (backendMsg: any, index: number) => {
+          let messageContent = "";
+          let messageType = "text"; // Default to text
+          let imageUrl = null;
 
-        // Process the prompt array to find text and image content
-        if (backendMsg.prompt && Array.isArray(backendMsg.prompt)) {
-          for (const part of backendMsg.prompt) {
-            if (part.type === "text" && part.content) {
-              messageContent = part.content; // Prioritize text content
-            }
-            if (part.type === "image" && part.content && part.content.url) {
-              imageUrl = part.content.url;
-              // If only image exists, set type to image
-              if (!messageContent) {
+          // Process the prompt array to find text and image content
+          if (backendMsg.prompt && Array.isArray(backendMsg.prompt)) {
+            for (const part of backendMsg.prompt) {
+              if (part.type === "text" && part.content) {
+                messageContent = part.content; // Prioritize text content
+              }
+              if (part.type === "image" && part.content && part.content.url) {
+                imageUrl = part.content.url;
+                // If only image exists, set type to image
+                if (!messageContent) {
                   messageType = "image";
                   messageContent = imageUrl; // Use URL as content for image type
+                }
               }
+              // If both text and image exist, current structure prioritizes text.
+              // If image should take precedence, adjust logic here.
             }
-            // If both text and image exist, current structure prioritizes text.
-            // If image should take precedence, adjust logic here.
           }
-        }
 
-        // Fallback if prompt processing yields no content (should ideally not happen)
-        if (!messageContent && !imageUrl) {
+          // Fallback if prompt processing yields no content (should ideally not happen)
+          if (!messageContent && !imageUrl) {
             messageContent = "[Empty Message]";
-        }
+          }
 
-        // Create the frontend message object
-        return {
-          // API doesn't provide a unique message ID, using index as key fallback
-          // Consider asking backend to add a unique message_id field
-          id: backendMsg.message_id || `history-${index}`, // Use message_id if backend adds it
-          is_bot: backendMsg.is_bot === true, // Ensure boolean comparison
-          message: messageContent,
-          message_type: messageType,
-          // Optionally store model info if needed for display later
-          model_id: backendMsg.model_id,
-          model_class: backendMsg.model_class,
-        };
-      });
+          // Create the frontend message object
+          return {
+            // API doesn't provide a unique message ID, using index as key fallback
+            // Consider asking backend to add a unique message_id field
+            id: backendMsg.message_id || `history-${index}`, // Use message_id if backend adds it
+            is_bot: backendMsg.is_bot === true, // Ensure boolean comparison
+            message: messageContent,
+            message_type: messageType,
+            // Optionally store model info if needed for display later
+            model_id: backendMsg.model_id,
+            model_class: backendMsg.model_class,
+          };
+        }
+      );
 
       // 更新 conversation 的 messages 数组
       props.conversation.messages = formattedMessages;
@@ -545,7 +545,6 @@ const loadConversationHistory = async () => {
       if (responseData.session_info && responseData.session_info.topic) {
         props.conversation.topic = responseData.session_info.topic;
       }
-
     } else {
       console.log("No messages found in the response.");
       props.conversation.messages = []; // Ensure messages array is empty
@@ -560,7 +559,6 @@ const loadConversationHistory = async () => {
       scrollChatWindow();
       console.log("Scrolled chat window after history load.");
     });
-
   } catch (error: any) {
     console.error("Failed to load conversation history:", error);
     showSnackbar(`加载历史消息失败: ${error.message || error}`);
@@ -575,12 +573,18 @@ watch(
   () => props.conversation.id,
   (newId, oldId) => {
     // Only load if the ID is valid and actually changed, or if it's the initial load with a valid ID
-    if (newId !== null && newId !== undefined && newId !== oldId) {
+    // oldId 等于 null，意味着这是个新对话
+    if (
+      newId !== null &&
+      newId !== undefined &&
+      newId !== oldId &&
+      oldId !== null
+    ) {
       loadConversationHistory();
     } else if (newId === null && oldId !== null) {
-        // Handle case where user navigates to "new chat" (ID becomes null)
-        props.conversation.messages = [];
-        props.conversation.loadingMessages = false;
+      // Handle case where user navigates to "new chat" (ID becomes null)
+      props.conversation.messages = [];
+      props.conversation.loadingMessages = false;
     }
   },
   { immediate: true } // 组件挂载时也执行一次, 会加载初始ID对应的历史
@@ -592,7 +596,7 @@ watch(
   <div v-if="conversation">
     <div v-if="conversation.loadingMessages" class="text-center">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <div class="mt-2">{{ $t('loadingHistoryMessages') }}</div>
+      <div class="mt-2">{{ $t("loadingHistoryMessages") }}</div>
     </div>
     <div v-else>
       <div v-if="conversation.messages" ref="chatWindow">
