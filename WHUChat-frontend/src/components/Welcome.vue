@@ -87,17 +87,17 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 const appName: string = import.meta.env.VITE_APP_NAME;
 
-const examples = ref([
+const examples = computed(() => [
   t("welcomeScreen.examples.item1"),
   t("welcomeScreen.examples.item2"),
   t("welcomeScreen.examples.item3"),
 ]);
-const capabilities = ref([
+const capabilities = computed(() => [
   t("welcomeScreen.capabilities.item1"),
   t("welcomeScreen.capabilities.item2"),
   t("welcomeScreen.capabilities.item3"),
 ]);
-const limitations = ref([
+const limitations = computed(() => [
   t("welcomeScreen.limitations.item1"),
   t("welcomeScreen.limitations.item2"),
   t("welcomeScreen.limitations.item3"),

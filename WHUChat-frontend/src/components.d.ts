@@ -8,7 +8,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppBar: typeof import('./components/AppBar.vue')['default']
-    Conversation: typeof import('./components/Conversation.vue')['default']
+    ContactUs: typeof import('./components/ContactUs.vue')['default']
+    MsgAlert: typeof import('./components/MsgAlert.vue')['default']
     DocumentsManage: typeof import('./components/DocumentsManage.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     MessageActions: typeof import('./components/MessageActions.vue')['default']
@@ -19,6 +20,7 @@ declare module 'vue' {
     Prompt: typeof import('./components/Prompt.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SettingsDialog: typeof import('./components/SettingsDialog.vue')['default']
     UserAvatar: typeof import('./components/UserAvatar.vue')['default']
     UserFooter: typeof import('./components/UserFooter.vue')['default']
     Welcome: typeof import('./components/Welcome.vue')['default']

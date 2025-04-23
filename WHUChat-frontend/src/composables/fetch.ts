@@ -57,26 +57,38 @@ export const useAuthFetch = <T>(url: string, options?: any): FetchReturn<T> => {
       return { options };
     },
 
-    onFetchError(ctx: OnFetchErrorContext): Partial<OnFetchErrorContext> | Promise<Partial<OnFetchErrorContext>> {
-      // ctx.data contains the response body if any
-      // ctx.error contains the Error object
-      // ctx.response contains the Response object
-      if (ctx.response?.status === 401) {
-        console.warn('Authentication error (401) detected by useAuthFetch.');
-        // 触发登出逻辑
-        try {
-          logout(); // Call your logout function
-          console.log('User logged out due to 401 error.');
-          // 可选: 重定向到登录页
-          // router.push('/login');
-        } catch (logoutErr) {
-          console.error('Logout failed after 401 error:', logoutErr);
-        }
-        // 可以选择取消进一步的错误处理或修改错误对象
-        // ctx.error = new Error('Session expired');
-      }
-      // 返回 ctx 继续默认错误处理，或返回 { error: null } 阻止 useFetch 设置 error ref
-      return ctx;
+    try {
+      const response = await axios({
+        url,
+        baseURL,
+        ...requestOptions
+      });
+      data.value = response.data
+    } catch (err) {
+      error.value = err instanceof Error ? err : new Error(String(err));
+      console.error('Request error:', err);
+    } finally {
+      loading.value = false;
+//     onFetchError(ctx: OnFetchErrorContext): Partial<OnFetchErrorContext> | Promise<Partial<OnFetchErrorContext>> {
+//       // ctx.data contains the response body if any
+//       // ctx.error contains the Error object
+//       // ctx.response contains the Response object
+//       if (ctx.response?.status === 401) {
+//         console.warn('Authentication error (401) detected by useAuthFetch.');
+//         // 触发登出逻辑
+//         try {
+//           logout(); // Call your logout function
+//           console.log('User logged out due to 401 error.');
+//           // 可选: 重定向到登录页
+//           // router.push('/login');
+//         } catch (logoutErr) {
+//           console.error('Logout failed after 401 error:', logoutErr);
+//         }
+//         // 可以选择取消进一步的错误处理或修改错误对象
+//         // ctx.error = new Error('Session expired');
+//       }
+//       // 返回 ctx 继续默认错误处理，或返回 { error: null } 阻止 useFetch 设置 error ref
+//       return ctx;
     }
     // --- 结束认证和错误处理 ---
   };

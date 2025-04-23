@@ -48,6 +48,12 @@ const createNewConversation = () => {
     topic: t("newConversation"),
   });
 };
+const signIn = () => {
+  router.push("/login");
+};
+const signUp = () => {
+  router.push("/register");
+};
 
 // 计算属性：导航标题  当值发生变化，即切换话题时，重新计算并渲染
 const navTitle = computed(() => {
@@ -83,7 +89,7 @@ const openSettings = () => {
 const signOut = async () => {
   // 调用退出登录API
   const { data, error } = await useAuthFetch("/api/account/logout/", {
-    method: "POST"
+    method: "POST",
   });
 
   if (!error.value) {
@@ -98,20 +104,32 @@ const signOut = async () => {
 
 <template>
   <v-app>
-    <AppBar />
-    <NavigationDrawer />
-
+    <AppBar
+      @open-settings="openSettings"
+      @sign-in="signIn"
+      @sign-out="signOut"
+      :user="user"
+    />
+    <NavigationDrawer
+      @open-settings="openSettings"
+      @sign-in="signIn"
+      @sign-out="signOut"
+      :user="user"
+    />
     <v-main>
       <div class="content-wrapper">
         <div
           class="content-inner"
-          :class="{'with-drawer': stateStore.drawer}"
+          :class="{ 'with-drawer': stateStore.drawer }"
         >
-          <Welcome v-if="!routerParams.id && conversation.messages.length === 0" />
+          <Welcome
+            v-if="!routerParams.id && conversation.messages.length === 0"
+          />
           <Conversation :conversation="conversation" />
         </div>
       </div>
     </v-main>
+    <SettingsDialog v-model="settingsDialogOpen" />
   </v-app>
 </template>
 
