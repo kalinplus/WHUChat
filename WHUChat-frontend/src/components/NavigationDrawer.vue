@@ -404,26 +404,23 @@ const settingDialog = ref(false);
               <template v-slot:append>
                 <div v-show="isHovering && conversation.id">
                   <v-btn
-                    icon="edit"
                     size="small"
                     variant="text"
                     @click.prevent="editConversation(cIdx)"
-                  >
+                  > <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
-                    icon="delete"
                     size="small"
                     variant="text"
                     :loading="deletingConversationIndex === cIdx"
                     @click.prevent="deleteConversation(cIdx)"
-                  >
+                  ><v-icon>mdi-trash-can</v-icon>
                   </v-btn>
                   <v-btn
-                    icon="download"
                     size="small"
                     variant="text"
                     @click.prevent="exportConversation(cIdx)"
-                  >
+                  ><v-icon>mdi-cloud-download</v-icon>
                   </v-btn>
                 </div>
               </template>

@@ -570,22 +570,23 @@ const loadConversationHistory = async () => {
 watch(
   () => props.conversation.id,
   (newId, oldId) => {
-    // Only load if the ID is valid and actually changed, or if it's the initial load with a valid ID
-    // oldId 等于 null，意味着这是个新对话
-    if (
-      newId !== null &&
-      newId !== undefined &&
-      newId !== oldId &&
-      oldId !== null
-    ) {
+    console.log(`Conversation ID changed: ${oldId} -> ${newId}`);
+
+    // 如果新ID有效且与旧ID不同，则加载历史
+    if (newId && newId !== oldId) {
       loadConversationHistory();
-    } else if (newId === null && oldId !== null) {
-      // Handle case where user navigates to "new chat" (ID becomes null)
+    }
+    // 如果新ID为null（创建新对话）
+    else if (newId === null) {
       props.conversation.messages = [];
       props.conversation.loadingMessages = false;
     }
+    // 如果首次加载时已有ID（处理直接通过URL访问的情况）
+    else if (newId && oldId === undefined) {
+      loadConversationHistory();
+    }
   },
-  { immediate: true } // 组件挂载时也执行一次, 会加载初始ID对应的历史
+  { immediate: true }
 );
 </script>
 
@@ -649,7 +650,6 @@ watch(
             v-show="fetchingResponse"
             @click="stop"
             class="mr-3"
-            icon
             color="error"
           >
             <v-icon>mdi-close</v-icon>

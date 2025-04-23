@@ -14,7 +14,7 @@ export interface ConversationData {
 export const getDefaultConversationData = () => {
   return {
     id: null,
-    topic: null,
+    // topic: null,
     messages: [],
     loadingMessages: false,
   };
