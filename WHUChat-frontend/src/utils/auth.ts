@@ -22,6 +22,7 @@ export const isAuthenticated = () => {
   return !!stateStore.user;
 };
 
+// TODO: 确认是否是要放在 localStorage 中
 export const getToken = () => {
   return localStorage.getItem("auth_token");
 };

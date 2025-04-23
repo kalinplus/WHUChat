@@ -42,7 +42,7 @@ export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
 // 认证请求封装 (主要修改在这里)
 // TODO: 检查这个函数，返回值好像有问题
 export const useAuthFetch = <T>(url: string, options?: any): FetchReturn<T> => {
-  const baseURL = import.meta.env.VITE_SERVER_DOMAIN || "";
+  const baseURL = import.meta.env.VITE_SERVER_DOMAIN || "http://localhost:886";
   const fullUrl = url.startsWith("http") ? url : `${baseURL}${url}`;
 
   const defaultOptions: any = {

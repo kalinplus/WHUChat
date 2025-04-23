@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps } from "vue";
 
 const props = defineProps({
   visible: {
@@ -33,7 +33,7 @@ const props = defineProps({
     type: String,
     default: "info",
     validator: (value) =>
-      ["info", "success", "warning", "error"].includes(value),
+      ["info", "success", "warning", "error"].includes(value as any),
   },
   message: {
     type: String,

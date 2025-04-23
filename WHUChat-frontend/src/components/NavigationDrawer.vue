@@ -15,7 +15,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
 import type { ConversationInfo, ConversationsResponse } from "@/types/types";
-import { logout } from "@/utils/auth";
+import { logout, getToken } from "@/utils/auth";
+import axios from "axios";
 
 const emit = defineEmits(["openSettings", "signOut"]);
 const stateStore = useStateStore();
@@ -121,11 +122,10 @@ const deleteConversation = async (index: number) => {
 
 // 创建新对话函数
 const createNewConversation = () => {
-  // 或方法2: 直接调用路由
   if (route.path !== "/") {
-    return router.push("/?new");
+    return router.push("/");
   }
-  // 如果已经在主页面，则关闭抽屉以便让用户看到新会话界面
+  // 如果已经在主页面，只关闭抽屉
   drawer.value = false;
 };
 
@@ -234,29 +234,44 @@ const loadingConversations = ref(false);
 const loadConversations = async () => {
   loadingConversations.value = true;
 
-  // 使用封装的 useAuthFetch
-  const { data, error, execute } = useAuthFetch<ConversationsResponse>(
-    "/api/v1/chat/history"
-  );
-
   try {
-    await execute(); // 手动执行请求
+    const baseURL =
+      import.meta.env.VITE_SERVER_DOMAIN || "http://localhost:886";
+    const token = getToken();
 
-    // 只需要检查业务错误或通用错误
-    if (data.value && data.value.error !== 0) {
-      console.error("API Error:", data.value.error);
+    const response = await axios.post(
+      `${baseURL}/api/v1/chat/history`,
+      { uuid: stateStore.user?.id || 0 },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
+
+    // 成功获取数据
+    if (response.data && response.data.error === 0) {
+      stateStore.setConversations(response.data.sessions || []);
+    } else {
+      // 业务逻辑错误
+      console.error("API Error:", response.data?.error);
       stateStore.setConversations([]);
-    } else if (error.value) {
-      // 401 错误已在 useAuthFetch 内部处理 (触发登出)
-      // 这里只需要处理其他类型的 fetch 错误
-      console.error("Fetch Error (non-401 or logout failed):", error.value);
-      stateStore.setConversations([]);
-    } else if (data.value) {
-      // 成功
-      stateStore.setConversations(data.value.sessions || []);
     }
   } catch (err) {
-    console.error("Error during fetch execution:", err);
+    // HTTP错误或网络错误
+    console.error("Error fetching conversations:", err);
+
+    // 处理401未授权错误
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      console.warn("Authentication error (401). Logging out...");
+      try {
+        await logout();
+      } catch (logoutErr) {
+        console.error("Logout failed:", logoutErr);
+      }
+    }
+
     stateStore.setConversations([]);
   } finally {
     loadingConversations.value = false;
@@ -331,40 +346,7 @@ const settingDialog = ref(false);
     </div>
 
     <v-divider></v-divider>
-    <!-- 用户信息 -->
-    <template v-slot:prepend v-if="user">
-      <v-list>
-        <v-list-item :title="user.username" :subtitle="user.email">
-          <template v-slot:prepend>
-            <v-icon icon="face" size="x-large"></v-icon>
-          </template>
-          <template v-slot:append>
-            <v-menu>
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  size="small"
-                  variant="text"
-                  icon="expand_more"
-                ></v-btn>
-              </template>
-              <v-list>
-                <v-list-item
-                  :title="$t('resetPassword')"
-                  to="/account/resetPassword"
-                >
-                </v-list-item>
-                <v-list-item :title="$t('signOut')" @click="signOut">
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </template>
-        </v-list-item>
-      </v-list>
-
-      <v-divider></v-divider>
-    </template>
-    <!-- 会话列表 -->
+    <!-- 会话列表 TODO: 表项里似乎有什么编辑模式-->
     <div class="px-2">
       <v-list>
         <v-list-item v-show="loadingConversations">
@@ -407,7 +389,11 @@ const settingDialog = ref(false);
             <v-list-item
               rounded="xl"
               base-color="primary"
-              :to="conversation.id ? `/${conversation.id}` : '/'"
+              :to="
+                conversation.id
+                  ? `/${stateStore.user?.id || '0'}/${conversation.id}`
+                  : '/'
+              "
               v-bind="props"
             >
               <v-list-item-title>{{
@@ -446,6 +432,39 @@ const settingDialog = ref(false);
         </template>
       </v-list>
     </div>
+    <!-- 用户信息 -->
+    <template v-slot:prepend v-if="user">
+      <v-list>
+        <v-list-item :title="user.username" :subtitle="user.email">
+          <template v-slot:prepend>
+            <v-icon icon="face" size="x-large"></v-icon>
+          </template>
+          <template v-slot:append>
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  size="small"
+                  variant="text"
+                  icon="expand_more"
+                ></v-btn>
+              </template>
+              <v-list>
+                <v-list-item
+                  :title="$t('resetPassword')"
+                  to="/account/resetPassword"
+                >
+                </v-list-item>
+                <v-list-item :title="$t('signOut')" @click="signOut">
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </template>
+        </v-list-item>
+      </v-list>
+
+      <v-divider></v-divider>
+    </template>
     <!-- 底部 -->
     <template v-slot:append>
       <v-divider></v-divider>

@@ -37,3 +37,56 @@ export interface ConversationsResponse {
   error: number;
   sessions: ConversationInfo[];
 }
+
+/**
+ * 消息中的 prompt 对象形式
+ */
+export interface PromptObject {
+  content: string;
+  role: 'user' | 'assistant' | string;
+}
+
+/**
+ * 消息中的 prompt 数组元素
+ */
+export interface PromptArrayItem {
+  type: 'text' | 'image' | string;
+  content: string | { url: string } | any;
+}
+
+/**
+ * 单条消息数据
+ */
+export interface MessageItem {
+  id: number;
+  model_id: number | null;
+  model_class?: string | null;
+  // prompt 可以是单个对象或数组形式
+  prompt: PromptObject | PromptArrayItem[] | any;
+  sender?: 'user' | 'assistant' | string;
+  session_id: number;
+  uuid: number;
+  // 可选的时间戳字段
+  timestamp?: string;
+}
+
+/**
+ * 会话历史消息响应
+ */
+export interface BrowseMessagesResponse {
+  error: number;
+  messages: MessageItem[];
+}
+
+/**
+ * 前端格式化后的消息结构
+ */
+export interface FormattedMessage {
+  id: string | number;
+  is_bot: boolean;
+  message: string;
+  message_type: 'text' | 'image' | string;
+  model_id?: number | null;
+  model_class?: string | null;
+  timestamp?: string;
+}

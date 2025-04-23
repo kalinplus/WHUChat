@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits } from "vue";
+import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
