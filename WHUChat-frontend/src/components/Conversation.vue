@@ -189,8 +189,8 @@ const setupWebSocket = (sessionId: string) => {
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
 
   // 定义标记常量
-  const START_MARKER = "$$$$$$$$$$";
-  const END_MARKER = "##########";
+  const START_MARKER = "Contents:";
+  const END_MARKER = "&&&&&&******^^^^^^";
 
   // WebSocket事件处理
   ws.value.onopen = () => {
