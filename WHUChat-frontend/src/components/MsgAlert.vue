@@ -2,7 +2,7 @@
 <template>
   <v-alert
     v-if="visible"
-    :type="type"
+    :type="type as any"
     class="mt-4 text-center animated fadeIn"
     dismissible
     @click:dismissible="handleClose"

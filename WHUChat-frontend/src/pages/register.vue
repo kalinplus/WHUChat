@@ -135,7 +135,7 @@ const checkbox = ref(false);
 
 // 验证码相关状态
 const countdown = ref(0);
-const timer = ref<NodeJS.Timeout | null>(null);
+const timer = ref<any>(null);
 const showAlertForVrfcode = ref(false);
 const loadingForVrfcode = ref(false);
 const errorMessage = ref("");
