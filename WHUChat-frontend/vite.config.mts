@@ -1,4 +1,5 @@
 // Plugins
+import fs from "node:fs";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import Fonts from "unplugin-fonts/vite";
@@ -65,6 +66,10 @@ export default defineConfig({
   server: {
     // port: 3000,
     port: 8091,
+    https: {
+      key: fs.readFileSync("src/server/server.key"),
+      cert: fs.readFileSync("src/server/server.crt"),
+    },
   },
   css: {
     preprocessorOptions: {
