@@ -173,7 +173,9 @@ const setupWebSocket = (sessionId: string) => {
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
   // FIXME: 测试用 ws URL
-  const wsUrl = `ws://localhost:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
+  const wsUrl = `${
+    import.meta.env.VITE_WS_PROTOCOL
+  }://127.0.0.1:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
     stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     currentModel.value.model_id || "claude-3-haiku"
@@ -296,11 +298,27 @@ const fetchReply = async (message: any) => {
   }));
   // TODO: 对于新页面和首次对话（创建新会话），传给后端的请求有所不同。不知道这里解决没有
   // 构建请求参数
+  // const requestData: ChatRequestData = {
+  //   uuid: stateStore.user?.id, // 用户ID
+  //   session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
+  //   model_id: currentModel.value.model_id || "claude-3-haiku", // 模型ID
+  //   model_class: currentModel.value.model_class || "anthropic", // 模型大类
+  //   prompt: formattedPrompt,
+  //   parameters: {
+  //     temperature: 0.7,
+  //     frugalMode: frugalMode.value,
+  //     // 如果启用了网页搜索
+  //     ...(enableWebSearch.value && {
+  //       online: true,
+  //       ua: navigator.userAgent,
+  //     }),
+  //   } as ChatParameters,
+  // };
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.id, // 用户ID
-    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
-    model_id: currentModel.value.model_id || "claude-3-haiku", // 模型ID
-    model_class: currentModel.value.model_class || "anthropic", // 模型大类
+    uuid: 1, // 用户ID
+    session_id: 16, // 会话ID，如果是新对话则为null
+    model_id: 1, // 模型ID
+    model_class: "anthropic", // 模型大类
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
@@ -324,18 +342,18 @@ const fetchReply = async (message: any) => {
 
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
-    const response = await fetch(
-      "http://localhost:886/api/v1/chat/send_message",
-      {
-        // const response = await fetch("/api/v1/chat/send_message", {
-        signal: ctrl.signal,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      }
-    );
+    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
+    const baseUrl =
+      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+    const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
+      // const response = await fetch("/api/v1/chat/send_message", {
+      signal: ctrl.signal,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestData),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
@@ -366,10 +384,12 @@ const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;
 } | null>(null);
 const scrollChatWindow = () => {
-  if (grab.value === null) {
-    return;
+  // @ts-ignore
+  const parent = grab.value?.parentElement;
+  if (parent) {
+    // 滚动到底部并向上调整 64px
+    parent.scrollTop = parent.scrollHeight - parent.clientHeight - 64;
   }
-  grab.value?.scrollIntoView({ behavior: "smooth" });
 };
 // 发送prompt
 const send = (message: any) => {
@@ -456,13 +476,15 @@ const loadConversationHistory = async () => {
 
     // 构建请求数据
     const requestData = {
-      uuid: stateStore.user?.id || 0,
-      session_id: props.conversation.id,
+      uuid: stateStore.user?.id || 1,
+      session_id: props.conversation.id || 16,
     };
 
     // 使用axios发送请求获取历史消息
     // TODO: 可能要改
-    const baseUrl = "http://localhost:886"; // 或者从配置读取
+    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
+    const baseUrl =
+      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/browse_messages`,
       requestData,
@@ -591,192 +613,204 @@ watch(
 </script>
 
 <template>
-  <!-- 渲染聊天气泡部分 -->
-  <div v-if="conversation">
-    <div v-if="conversation.loadingMessages" class="text-center">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <div class="mt-2">{{ $t("loadingHistoryMessages") }}</div>
-    </div>
-    <div v-else>
-      <div v-if="conversation.messages" ref="chatWindow">
-        <v-container>
-          <v-row>
-            <v-col
-              v-for="(message, index) in conversation.messages"
-              :key="index"
-              cols="12"
-            >
-              <div
-                class="d-flex align-center"
-                :class="message.is_bot ? 'justify-start' : 'justify-end'"
+  <!-- 主容器，添加适当的底部内边距来容纳固定在底部的输入框 -->
+  <div class="chat-container">
+    <!-- 渲染聊天气泡部分 -->
+    <div v-if="conversation" class="messages-area">
+      <div v-if="conversation.loadingMessages" class="text-center">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
+        <div class="mt-2">{{ $t("loadingHistoryMessages") }}</div>
+      </div>
+      <div v-else class="messages-content">
+        <div v-if="conversation.messages" ref="chatWindow">
+          <v-container>
+            <v-row>
+              <v-col
+                v-for="(message, index) in conversation.messages"
+                :key="index"
+                cols="12"
               >
-                <MessageActions
-                  v-if="!message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-                <MsgContent
-                  :message="message"
-                  :index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-                <MessageActions
-                  v-if="message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
+                <div
+                  class="d-flex align-center"
+                  :class="message.is_bot ? 'justify-start' : 'justify-end'"
+                >
+                  <MessageActions
+                    v-if="!message.is_bot"
+                    :message="message"
+                    :message-index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                  <MsgContent
+                    :message="message"
+                    :index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                  <MessageActions
+                    v-if="message.is_bot"
+                    :message="message"
+                    :message-index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
 
-        <div ref="grab" class="w-100" style="height: 1px"></div>
+          <div ref="grab" class="w-100" style="height: 1px"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 底部发消息、选配置部分 -->
-  <v-footer app class="footer">
-    <v-card flat width="100%" class="message-control-panel pa-3">
-      <div class="d-flex flex-column">
-        <!-- 上部分：消息编辑区和停止按钮 -->
-        <div class="d-flex align-center">
-          <v-btn
-            v-show="fetchingResponse"
-            @click="stop"
-            class="mr-3"
-            color="error"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          <!-- MsgEditor 组件 -->
-          <MsgEditor
-            ref="editor"
-            :send-message="send"
-            :disabled="fetchingResponse"
-            :loading="fetchingResponse"
-          />
-        </div>
-
-        <!-- 下部分：功能区域 -->
-        <div class="d-flex align-center flex-wrap mt-2">
-          <Prompt
-            v-show="!fetchingResponse"
-            :use-prompt="usePrompt"
-            class="mr-2"
-          />
-
-          <!-- 模型选择按钮 -->
-          <v-btn
-            variant="outlined"
-            rounded="pill"
-            size="small"
-            class="mr-2 my-1 model-select-btn"
-            prepend-icon="mdi-cpu"
-            @click="showModelSelector = true"
-            style="margin-left: 10px"
-          >
-            <div class="d-flex align-center">
-              <v-avatar
-                size="20"
-                class="mr-1"
-                v-if="stateStore.currentModel?.logo"
-              >
-                <v-img
-                  :src="stateStore.currentModel.logo"
-                  alt="Model logo"
-                ></v-img>
-              </v-avatar>
-              <span>{{
-                stateStore.currentModel?.name || t("selectModel")
-              }}</span>
-            </div>
-            <template v-slot:append>
-              <v-icon size="x-small" class="ml-1">mdi-chevron-down</v-icon>
-            </template>
-          </v-btn>
-
-          <!-- 网页搜索按钮 -->
-          <v-btn
-            v-if="settings.enableWebSearch === true"
-            :color="enableWebSearch ? 'primary' : ''"
-            variant="outlined"
-            rounded="pill"
-            size="small"
-            class="mr-2 my-1"
-            prepend-icon="mdi-web"
-            @click="enableWebSearch = !enableWebSearch"
-          >
-            {{ t("webSearch") }}
-            <template v-slot:append>
-              <v-icon
-                size="x-small"
-                :color="enableWebSearch ? 'aliceblue' : ''"
-                class="ml-1"
-              >
-                {{
-                  enableWebSearch ? "mdi-check-circle" : "mdi-circle-outline"
-                }}
-              </v-icon>
-            </template>
-          </v-btn>
-
-          <!-- 节俭模式按钮 -->
-          <div v-if="settings.frugalMode === true" class="d-flex align-center">
+    <!-- 底部发消息、选配置部分 - 使用固定定位 -->
+    <div class="footer-fixed">
+      <v-card flat width="100%" class="message-control-panel pa-3">
+        <div class="d-flex flex-column">
+          <!-- 上部分：消息编辑区和停止按钮 -->
+          <div class="d-flex align-center">
             <v-btn
-              :color="frugalMode ? 'primary' : ''"
+              v-show="fetchingResponse"
+              @click="stop"
+              class="mr-3"
+              color="error"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+            <!-- MsgEditor 组件 -->
+            <MsgEditor
+              ref="editor"
+              :send-message="send"
+              :disabled="fetchingResponse"
+              :loading="fetchingResponse"
+            />
+          </div>
+
+          <!-- 下部分：功能区域 -->
+          <div class="d-flex align-center flex-wrap mt-2">
+            <!-- 原有按钮不变... -->
+            <Prompt
+              v-show="!fetchingResponse"
+              :use-prompt="usePrompt"
+              class="mr-2"
+            />
+
+            <!-- 模型选择按钮 -->
+            <v-btn
+              variant="outlined"
+              rounded="pill"
+              size="small"
+              class="mr-2 my-1 model-select-btn"
+              prepend-icon="mdi-cpu"
+              @click="showModelSelector = true"
+              style="margin-left: 10px"
+            >
+              <div class="d-flex align-center">
+                <v-avatar
+                  size="20"
+                  class="mr-1"
+                  v-if="stateStore.currentModel?.logo"
+                >
+                  <v-img
+                    :src="stateStore.currentModel.logo"
+                    alt="Model logo"
+                  ></v-img>
+                </v-avatar>
+                <span>{{
+                  stateStore.currentModel?.name || t("selectModel")
+                }}</span>
+              </div>
+              <template v-slot:append>
+                <v-icon size="x-small" class="ml-1">mdi-chevron-down</v-icon>
+              </template>
+            </v-btn>
+
+            <!-- 网页搜索按钮 -->
+            <v-btn
+              v-if="settings.enableWebSearch === true"
+              :color="enableWebSearch ? 'primary' : ''"
               variant="outlined"
               rounded="pill"
               size="small"
               class="mr-2 my-1"
-              prepend-icon="mdi-lightning-bolt"
-              @click="frugalMode = !frugalMode"
+              prepend-icon="mdi-web"
+              @click="enableWebSearch = !enableWebSearch"
             >
-              {{ t("frugalMode") }}
+              {{ t("webSearch") }}
               <template v-slot:append>
                 <v-icon
                   size="x-small"
-                  :color="frugalMode ? 'aliceblue' : ''"
+                  :color="enableWebSearch ? 'aliceblue' : ''"
                   class="ml-1"
                 >
-                  {{ frugalMode ? "mdi-check-circle" : "mdi-circle-outline" }}
+                  {{
+                    enableWebSearch ? "mdi-check-circle" : "mdi-circle-outline"
+                  }}
                 </v-icon>
               </template>
             </v-btn>
 
-            <v-tooltip
-              :text="t('frugalModeTip')"
-              location="top"
-              max-width="300"
+            <!-- 节俭模式按钮 -->
+            <div
+              v-if="settings.frugalMode === true"
+              class="d-flex align-center"
             >
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  icon
-                  variant="text"
-                  v-bind="props"
-                  class="ml-0"
-                  density="comfortable"
-                  size="small"
-                >
-                  <v-icon color="grey" size="small"
-                    >mdi-help-circle-outline</v-icon
+              <v-btn
+                :color="frugalMode ? 'primary' : ''"
+                variant="outlined"
+                rounded="pill"
+                size="small"
+                class="mr-2 my-1"
+                prepend-icon="mdi-lightning-bolt"
+                @click="frugalMode = !frugalMode"
+              >
+                {{ t("frugalMode") }}
+                <template v-slot:append>
+                  <v-icon
+                    size="x-small"
+                    :color="frugalMode ? 'aliceblue' : ''"
+                    class="ml-1"
                   >
-                </v-btn>
-              </template>
-            </v-tooltip>
+                    {{ frugalMode ? "mdi-check-circle" : "mdi-circle-outline" }}
+                  </v-icon>
+                </template>
+              </v-btn>
+
+              <v-tooltip
+                :text="t('frugalModeTip')"
+                location="top"
+                max-width="300"
+              >
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    icon
+                    variant="text"
+                    v-bind="props"
+                    class="ml-0"
+                    density="comfortable"
+                    size="small"
+                  >
+                    <v-icon color="grey" size="small"
+                      >mdi-help-circle-outline</v-icon
+                    >
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- 引入模型选择器组件 -->
-      <ModelSelector v-model="showModelSelector" @select="handleModelSelect" />
-    </v-card>
-  </v-footer>
-
+        <!-- 引入模型选择器组件 -->
+        <ModelSelector
+          v-model="showModelSelector"
+          @select="handleModelSelect"
+        />
+      </v-card>
+    </div>
+  </div>
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
 
@@ -790,25 +824,80 @@ watch(
 </template>
 
 <style scoped>
-.footer {
+/* 主容器 */
+.chat-container {
+  position: relative;
+  height: 100vh;
   width: 100%;
-  padding: 0;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--chat-footer-height) + 16px); /* 底部留出空间 */
+  --chat-footer-height: 140px; /* 根据底部控制面板的实际高度调整 */
+}
+
+/* 消息区域 */
+.messages-area {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  padding-bottom: 20px; /* 额外底部空间，避免最后一条消息太靠近底部 */
+}
+
+.messages-content {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 固定在底部的页脚 */
+.footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: var(--v-theme-surface);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 添加阴影，增加层次感 */
 }
 
 .message-control-panel {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   background-color: var(--v-theme-surface);
+  /* 确保面板不会超出屏幕底部 */
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
 }
 
 /* 深色主题适配 */
 :deep(.v-theme--dark) .message-control-panel {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* 确保按钮在小屏幕上合理换行 */
 @media (max-width: 600px) {
+  .chat-container {
+    --chat-footer-height: 160px; /* 在小屏幕上可能需要更多空间 */
+  }
+
   .d-flex.align-center.flex-wrap {
     justify-content: space-between;
+  }
+
+  /* 在移动设备上可能需要调整一些间距和大小 */
+  .message-control-panel {
+    padding: 10px !important;
+  }
+}
+
+/* 针对小屏幕设备的额外样式 - 当键盘弹出时 */
+@media screen and (max-height: 450px) {
+  .footer-fixed {
+    position: sticky; /* 在键盘弹出时改为sticky定位 */
+    bottom: 0;
+  }
+
+  .chat-container {
+    padding-bottom: 16px; /* 减小底部填充 */
   }
 }
 </style>

@@ -19,7 +19,7 @@ export interface ChatRequestData {
   uuid: number | string; // 用户唯一标识
   session_id: number | string | null; // 会话ID（新对话为null）
   model_class: string; // 模型ID，如"claude-3-haiku"
-  model_id: string; // 模型大类，如"gemini"
+  model_id: number; // 模型大类，如"gemini"
   prompt: PromptMessage[]; // 用户提示内容数组
   parameters: ChatParameters; // 参数对象
   URL?: string; // 可选的自定义模型调用网址

@@ -235,12 +235,13 @@ const loadConversations = async () => {
   loadingConversations.value = true;
 
   try {
-    const baseURL =
-      import.meta.env.VITE_SERVER_DOMAIN || "http://localhost:886";
+    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
+    const baseUrl =
+      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
     const token = getToken();
 
     const response = await axios.post(
-      `${baseURL}/api/v1/chat/history`,
+      `${baseUrl}/api/v1/chat/history`,
       { uuid: stateStore.user?.id || 0 },
       {
         headers: {
@@ -407,20 +408,21 @@ const settingDialog = ref(false);
                     size="small"
                     variant="text"
                     @click.prevent="editConversation(cIdx)"
-                  > <v-icon>mdi-pencil</v-icon>
+                  >
+                    <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
                     size="small"
                     variant="text"
                     :loading="deletingConversationIndex === cIdx"
                     @click.prevent="deleteConversation(cIdx)"
-                  ><v-icon>mdi-trash-can</v-icon>
+                    ><v-icon>mdi-trash-can</v-icon>
                   </v-btn>
                   <v-btn
                     size="small"
                     variant="text"
                     @click.prevent="exportConversation(cIdx)"
-                  ><v-icon>mdi-cloud-download</v-icon>
+                    ><v-icon>mdi-cloud-download</v-icon>
                   </v-btn>
                 </div>
               </template>

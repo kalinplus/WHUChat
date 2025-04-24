@@ -40,10 +40,11 @@ export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
 };
 
 // 认证请求封装 (主要修改在这里)
-// TODO: 检查这个函数，返回值好像有问题
+// TODO: 检查这个函数，好像有问题
 export const useAuthFetch = <T>(url: string, options?: any): FetchReturn<T> => {
-  const baseURL = import.meta.env.VITE_SERVER_DOMAIN || "http://localhost:886";
-  const fullUrl = url.startsWith("http") ? url : `${baseURL}${url}`;
+  const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
+  const baseUrl = `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
 
   const defaultOptions: any = {
     immediate: false, // Don't execute immediately

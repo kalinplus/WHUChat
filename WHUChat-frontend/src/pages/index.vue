@@ -139,6 +139,7 @@ const signOut = async () => {
 <template>
   <v-app>
     <AppBar
+      class="appbar"
       @open-settings="openSettings"
       @sign-in="signIn"
       @sign-out="signOut"
@@ -156,7 +157,8 @@ const signOut = async () => {
           class="content-inner"
           :class="{ 'with-drawer': stateStore.drawer }"
         >
-          <Welcome :class="{loading: conversation.loadingMessages}"
+          <Welcome
+            :class="{ loading: conversation.loadingMessages }"
             v-if="!routerParams.id && conversation.messages.length === 0"
           />
           <Conversation :conversation="conversation" />
@@ -168,11 +170,18 @@ const signOut = async () => {
 </template>
 
 <style scoped>
+.appbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
 .content-wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 16px;
+  margin-top: 64px;
 }
 
 .content-inner {
@@ -192,7 +201,7 @@ const signOut = async () => {
 }
 
 .loading::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -202,7 +211,12 @@ const signOut = async () => {
   /* background-color: rgba(255, 255, 255, 0.8); */ /* Example: Semi-transparent white */
 
   /* Option 2: Blurred background */
-  background-color: rgba(255, 255, 255, 0.5); /* Light overlay helps blur visibility */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.5
+  ); /* Light overlay helps blur visibility */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px); /* Safari support */
 
