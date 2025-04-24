@@ -161,7 +161,6 @@ const setupWebSocket = (sessionId: string) => {
   }
 
   // 创建新的WebSocket连接
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
   // FIXME: encodeURIComponent 由 AI 生成，可能不需要
@@ -173,9 +172,7 @@ const setupWebSocket = (sessionId: string) => {
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
   // FIXME: 测试用 ws URL
-  const wsUrl = `${
-    import.meta.env.VITE_WS_PROTOCOL
-  }://127.0.0.1:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
+  const wsUrl = `wss://127.0.0.1:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
     stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     currentModel.value.model_id || "claude-3-haiku"
@@ -478,6 +475,7 @@ const loadConversationHistory = async () => {
     //   uuid: stateStore.user?.id || 1,
     //   session_id: props.conversation.id || 16,
     // };
+    // TODO: 这里要用正常逻辑，不能硬编码
     const requestData = {
       uuid: 1,
       session_id: 17,
@@ -597,7 +595,7 @@ watch(
     console.log(`Conversation ID changed: ${oldId} -> ${newId}`);
 
     // 如果新ID有效且与旧ID不同，则加载历史
-    if (newId && newId !== oldId) {
+    if (newId && newId !== oldId && oldId !== null) {
       loadConversationHistory();
     }
     // 如果新ID为null（创建新对话）
