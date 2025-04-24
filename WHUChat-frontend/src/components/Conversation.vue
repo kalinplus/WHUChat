@@ -474,9 +474,13 @@ const loadConversationHistory = async () => {
     props.conversation.messages = [];
 
     // 构建请求数据
+    // const requestData = {
+    //   uuid: stateStore.user?.id || 1,
+    //   session_id: props.conversation.id || 16,
+    // };
     const requestData = {
-      uuid: stateStore.user?.id || 1,
-      session_id: props.conversation.id || 16,
+      uuid: 1,
+      session_id: 16,
     };
 
     // 使用axios发送请求获取历史消息

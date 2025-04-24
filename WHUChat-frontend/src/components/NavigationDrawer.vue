@@ -240,7 +240,7 @@ const loadConversations = async () => {
 
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/history`,
-      { uuid: stateStore.user?.id || 0 },
+      { uuid: stateStore.user?.id || 1 },
       {
         headers: {
           "Content-Type": "application/json",
