@@ -171,11 +171,11 @@ const setupWebSocket = (sessionId: string) => {
   // )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
-  // FIXME: 测试用 ws URL
+  // FIXME: 测试用 ws URL  这里都是硬编码
   const wsUrl = `wss://127.0.0.1:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
-    stateStore.user?.id
+    1 || stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    currentModel.value.model_id || "claude-3-haiku"
+    1 || currentModel.value.model_id
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
