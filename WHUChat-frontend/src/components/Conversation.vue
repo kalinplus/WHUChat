@@ -358,7 +358,7 @@ const fetchReply = async (message: any) => {
     const responseData = await response.json();
 
     // 检查是否有错误
-    if (responseData.error) {
+    if (responseData.error !== 0) {
       throw new Error(`API error: ${responseData.error}`);
     }
 
