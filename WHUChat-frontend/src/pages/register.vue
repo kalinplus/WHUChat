@@ -291,6 +291,7 @@ const handleSubmit = async () => {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
+      withCredentials: true, // 添加这一行来显式携带 cookie
       body: JSON.stringify(encryptedData),
     });
 

@@ -246,6 +246,7 @@ const loadConversations = async () => {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        withCredentials: true, // 添加这一行来显式携带 cookie
       }
     );
 

@@ -75,6 +75,7 @@ async function uploadFile() {
           accept: "application/json",
           "Content-Type": "application/json",
         },
+        withCredentials: true, // 添加这一行来显式携带 cookie
         body: JSON.stringify({
           title: (file as File).name,
           file: base64Data,

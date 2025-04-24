@@ -350,6 +350,7 @@ const fetchReply = async (message: any) => {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include", // 添加这一行来显式携带 cookie
       body: JSON.stringify(requestData),
     });
 
@@ -490,6 +491,7 @@ const loadConversationHistory = async () => {
           // 如果需要认证，添加 Authorization header
           // 'Authorization': `Bearer ${getToken()}`
         },
+        withCredentials: true, // 添加这一行来显式携带 cookie
       }
     );
 
