@@ -342,9 +342,7 @@ const fetchReply = async (message: any) => {
 
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
-    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
-    const baseUrl =
-      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+    const baseUrl = "https://127.0.0.1:8081";
     const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
       // const response = await fetch("/api/v1/chat/send_message", {
       signal: ctrl.signal,
@@ -482,9 +480,7 @@ const loadConversationHistory = async () => {
 
     // 使用axios发送请求获取历史消息
     // TODO: 可能要改
-    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
-    const baseUrl =
-      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+    const baseUrl = "https://127.0.0.1:8081";
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/browse_messages`,
       requestData,

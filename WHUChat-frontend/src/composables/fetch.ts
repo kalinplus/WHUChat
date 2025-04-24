@@ -19,8 +19,8 @@ interface FetchReturn<T> {
 
 // 基础 Fetch 封装 (可选，如果非认证请求也需要统一处理 baseURL)
 export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
-  const baseURL = import.meta.env.VITE_SERVER_DOMAIN || "";
-  const fullUrl = url.startsWith("http") ? url : `${baseURL}${url}`;
+  const baseUrl = "https://127.0.0.1:8081";;
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
 
   const defaultOptions: any = {
     immediate: false, // Don't execute immediately

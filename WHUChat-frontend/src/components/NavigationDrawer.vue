@@ -235,9 +235,7 @@ const loadConversations = async () => {
   loadingConversations.value = true;
 
   try {
-    const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
-    const baseUrl =
-      `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+    const baseUrl = "https://127.0.0.1:8081";
     const token = getToken();
 
     const response = await axios.post(
