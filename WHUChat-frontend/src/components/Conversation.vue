@@ -450,7 +450,9 @@ onUnmounted(() => {
   }
 });
 
-// 加载会话历史消息
+/**
+ * 加载当前会话的所有历史对话消息
+ */
 const loadConversationHistory = async () => {
   // 如果没有会话ID，则不需要加载历史
   if (!props.conversation?.id) {
@@ -612,13 +614,20 @@ watch(
   },
   { immediate: true }
 );
+// 判断是否有历史消息
+const hasMessages = computed(
+  () =>
+    props.conversation &&
+    props.conversation.messages &&
+    props.conversation.messages.length > 0
+);
 </script>
 
 <template>
   <!-- 主容器，添加适当的底部内边距来容纳固定在底部的输入框 -->
   <div class="chat-container">
     <!-- 渲染聊天气泡部分 -->
-    <div v-if="conversation" class="messages-area">
+    <div v-if="hasMessages" class="messages-area">
       <div v-if="conversation.loadingMessages" class="text-center">
         <v-progress-circular
           indeterminate
@@ -670,7 +679,7 @@ watch(
     </div>
 
     <!-- 底部发消息、选配置部分 - 使用固定定位 -->
-    <div class="footer-fixed">
+    <div class="footer-fixed" :class="{ 'with-drawer': stateStore.drawer }">
       <v-card flat width="100%" class="message-control-panel pa-3">
         <div class="d-flex flex-column">
           <!-- 上部分：消息编辑区和停止按钮 -->
@@ -805,7 +814,7 @@ watch(
             </div>
           </div>
         </div>
-        <!-- 引入模型选择器组件 -->
+        <!-- 模型选择器组件 -->
         <ModelSelector
           v-model="showModelSelector"
           @select="handleModelSelect"
@@ -813,6 +822,7 @@ watch(
       </v-card>
     </div>
   </div>
+  <!-- 临时提示组件 -->
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
 
@@ -829,11 +839,37 @@ watch(
 /* 主容器 */
 .chat-container {
   position: relative;
-  height: 100vh;
+  min-height: 0;
   width: 100%;
   overflow-x: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   padding-bottom: calc(var(--chat-footer-height) + 16px); /* 底部留出空间 */
   --chat-footer-height: 140px; /* 根据底部控制面板的实际高度调整 */
+  transition: padding-left 0.5s ease;
+}
+
+.chat-container.with-drawer {
+  padding-left: 300px;
+}
+
+/* 在小屏幕上，侧边栏可能是临时的覆盖模式，不需要调整宽度 */
+@media (max-width: 960px) {
+  .footer-fixed.with-drawer {
+    left: 0;
+    width: 100%;
+  }
+  .chat-container.with-drawer {
+    padding-left: 0;
+  }
+}
+
+/* 添加一个占位区域，仅当没有消息时显示 */
+.empty-chat-placeholder {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: auto;
 }
 
 /* 消息区域 */
@@ -859,6 +895,11 @@ watch(
   width: 100%;
   z-index: 100;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 添加阴影，增加层次感 */
+}
+/* 侧边栏打开时的样式调整 */
+.footer-fixed.with-drawer {
+  left: 300px;
+  width: calc(100% - 300px);
 }
 
 .message-control-panel {
