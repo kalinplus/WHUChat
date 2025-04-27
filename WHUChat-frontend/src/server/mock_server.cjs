@@ -1,6 +1,6 @@
 // mock-server.js
 const express = require("express");
-const http = require("http");
+const https = require("https");
 const WebSocket = require("ws");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -235,13 +235,19 @@ app.post("/api/v1/chat/history", (req, res) => {
   });
 });
 
+const fs = require("fs");
+const httpsOptions = {
+  key: fs.readFileSync("src/server/server.key"),
+  cert: fs.readFileSync("src/server/server.crt"),
+};
+
 // 创建HTTP服务器
-const server = http.createServer(app);
+const server = https.createServer(httpsOptions, app);
 
 // 创建WebSocket服务器
 const wss = new WebSocket.Server({
   server,
-  path: "/api/v1/ws/tran_ans",
+  path: "/api/v1/ws/trans_ans",
 });
 
 // 处理WebSocket连接
@@ -249,7 +255,7 @@ wss.on("connection", (ws, req) => {
   console.log("WebSocket connected");
 
   // 解析URL查询参数
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = new URL(req.url, `https://${req.headers.host}`);
   console.log("Connection params:", {
     uuid: url.searchParams.get("uuid"),
     session_id: url.searchParams.get("session_id"),
@@ -305,6 +311,6 @@ wss.on("connection", (ws, req) => {
 });
 
 // 启动服务器
-server.listen(886, () => {
-  console.log("Mock server running on http://localhost:886");
+server.listen(8081, () => {
+  console.log("Mock server running on https://127.0.0.1:8081");
 });

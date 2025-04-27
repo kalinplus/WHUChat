@@ -172,7 +172,9 @@ const setupWebSocket = (sessionId: number) => {
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
   // FIXME: 测试用 ws URL  这里都是硬编码
-  const wsUrl = `wss://127.0.0.1:8081/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
+  const wsUrl = `wss://${
+    import.meta.env.VITE_API_HOST
+  }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
     1 || stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     1 || currentModel.value.model_id
@@ -339,7 +341,7 @@ const fetchReply = async (message: any) => {
 
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
-    const baseUrl = "https://127.0.0.1:8081";
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
       // const response = await fetch("/api/v1/chat/send_message", {
       signal: ctrl.signal,
@@ -483,7 +485,7 @@ const loadConversationHistory = async () => {
 
     // 使用axios发送请求获取历史消息
     // TODO: 可能要改
-    const baseUrl = "https://127.0.0.1:8081";
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/browse_messages`,
       requestData,

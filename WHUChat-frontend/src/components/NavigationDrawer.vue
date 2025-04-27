@@ -73,11 +73,17 @@ const conversations = useConversations();
 
 const editingConversation = ref();
 const deletingConversationIndex = ref();
-
+/**
+ *  启动编辑模式
+ * @param index 会话id
+ */
 const editConversation = (index: number) => {
   editingConversation.value = conversations.value[index];
 };
-
+/**
+ *  保存已编辑的对话标题到服务器并更新本地数据
+ * @param index 会话id
+ */
 const updateConversation = async (index: number) => {
   editingConversation.value.updating = true;
   const { data, error } = await useAuthFetch(
@@ -96,7 +102,10 @@ const updateConversation = async (index: number) => {
   conversations.value[index].updating = false;
   editingConversation.value = false;
 };
-
+/**
+ *  删除会话
+ * @param index 会话id
+ */
 const deleteConversation = async (index: number) => {
   deletingConversationIndex.value = index;
   const { data, error } = await useAuthFetch(
@@ -119,8 +128,9 @@ const deleteConversation = async (index: number) => {
     }
   }
 };
-
-// 创建新对话函数
+/**
+ * 创建新会话
+ */
 const createNewConversation = () => {
   if (route.path !== "/") {
     return router.push("/");
@@ -135,9 +145,12 @@ const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
 };
-
-// TODO: 这个的api要换成我们的
+/**
+ *  获取指定会话的对话数据，只供 exportConversation 函数使用，用于导出会话数据
+ * @param conversation_id 会话id
+ */
 const loadMessage = async (conversation_id: number) => {
+  // TODO: 这个的api要换成我们的
   const { data, error } = await useAuthFetch(
     `/api/chat/messages/?conversationId=${conversation_id}`
   );
@@ -146,7 +159,10 @@ const loadMessage = async (conversation_id: number) => {
   }
   return error.value;
 };
-
+/**
+ *  导出会话中的对话数据
+ * @param index 会话id
+ */
 const exportConversation = async (index: number) => {
   let conversation = conversations.value[index];
   let data = {};
@@ -181,7 +197,7 @@ const exportConversation = async (index: number) => {
   document.body.removeChild(element);
 };
 
-// FIXME: 导入会话也可以先不考虑
+// FIXME: 导入会话可以先不考虑
 // const openImportFileChooser = async () => {
 //   let input_element = document.getElementById("import_conversation_input");
 //   input_element?.click();
@@ -230,23 +246,26 @@ const exportConversation = async (index: number) => {
 
 const deletingConversations = ref(false);
 const loadingConversations = ref(false);
-
+/**
+ * 加载所有历史会话的简单信息，用于显示在侧边栏
+ */
 const loadConversations = async () => {
   loadingConversations.value = true;
 
   try {
-    const baseUrl = "https://127.0.0.1:8081";
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const token = getToken();
 
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/history`,
+      // TODO: uuid 要和登录注册联动好
       { uuid: stateStore.user?.id || 1 },
       {
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        withCredentials: true, // 添加这一行来显式携带 cookie
+        withCredentials: true,
       }
     );
 
@@ -344,18 +363,18 @@ const settingDialog = ref(false);
         {{ $t("newConversation") }}
       </v-btn>
     </div>
-
     <v-divider></v-divider>
-    <!-- 会话列表 TODO: 表项里似乎有什么编辑模式-->
+    <!-- 历史会话列表 -->
     <div class="px-2">
       <v-list>
+        <!-- 加载动画指示器 -->
         <v-list-item v-show="loadingConversations">
           <v-list-item-title class="d-flex justify-center">
             <v-progress-circular indeterminate></v-progress-circular>
           </v-list-item-title>
         </v-list-item>
       </v-list>
-
+      <!-- 历史会话列表 -->
       <v-list>
         <template
           v-for="(conversation, cIdx) in conversations"
@@ -368,6 +387,7 @@ const settingDialog = ref(false);
               editingConversation && editingConversation.id === conversation.id
             "
           >
+            <!-- TODO: updateConversation 要和后端对接 -->
             <v-text-field
               v-model="editingConversation.topic"
               :loading="editingConversation.updating"
@@ -396,9 +416,11 @@ const settingDialog = ref(false);
               "
               v-bind="props"
             >
+              <!-- TODO: editConversation 要和后端对接 -->
+              <!-- 这里是会话的标题 -->
               <v-list-item-title>{{
-                conversation.topic && conversation.topic !== ""
-                  ? conversation.topic
+                conversation.title && conversation.title !== ""
+                  ? conversation.title
                   : $t("defaultConversationTitle")
               }}</v-list-item-title>
               <template v-slot:append>
@@ -474,6 +496,7 @@ const settingDialog = ref(false);
       />
     </template>
   </v-navigation-drawer>
+  <!-- 一个临时的消息提示，不管也行 -->
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
     <template v-slot:actions>
@@ -488,6 +511,7 @@ const settingDialog = ref(false);
       </v-btn>
     </template>
   </v-snackbar>
+  <!-- 导入对话，可以暂时不管 -->
   <!-- <input
     type="file"
     id="import_conversation_input"
