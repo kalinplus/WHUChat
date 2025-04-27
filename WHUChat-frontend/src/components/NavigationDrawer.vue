@@ -258,7 +258,7 @@ const loadConversations = async () => {
 
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/history`,
-      // TODO: uuid 要和登录注册联动好
+      // TODO: uuid 要和登录注册联动好，现在 1 是测试
       { uuid: stateStore.user?.id || 1 },
       {
         headers: {
@@ -271,7 +271,15 @@ const loadConversations = async () => {
 
     // 成功获取数据
     if (response.data && response.data.error === 0) {
-      stateStore.setConversations(response.data.sessions || []);
+      // 按更新时间降序排序（最新的在最前面）
+      const sessions = response.data.sessions || [];
+      const sortedSessions = [...sessions].sort((a, b) => {
+        const dateA = new Date(a.updated_at);
+        const dateB = new Date(b.updated_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      stateStore.setConversations(sortedSessions);
     } else {
       // 业务逻辑错误
       console.error("API Error:", response.data?.error);
@@ -280,7 +288,6 @@ const loadConversations = async () => {
   } catch (err) {
     // HTTP错误或网络错误
     console.error("Error fetching conversations:", err);
-
     // 处理401未授权错误
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       console.warn("Authentication error (401). Logging out...");
@@ -290,17 +297,12 @@ const loadConversations = async () => {
         console.error("Logout failed:", logoutErr);
       }
     }
-
     stateStore.setConversations([]);
   } finally {
     loadingConversations.value = false;
   }
 };
-
-onMounted(() => {
-  loadConversations();
-});
-
+// TODO: 与登录注册功能和接口对接
 const signOut = async () => {
   const { data, error } = await useMyFetch("/api/account/logout/", {
     method: "POST",
@@ -316,14 +318,12 @@ onMounted(async () => {
 
 const drawer = useDrawer();
 
+// TODO: 陈致远做设置界面
 const currentThemeName = computed(() => {
   return theme.global.name.value;
 });
-
 const userAvatar = ref(null);
-
 const settingDialog = ref(false);
-// TODO: 陈致远做设置界面
 </script>
 
 <template>
