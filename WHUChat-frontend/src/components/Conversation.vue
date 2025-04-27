@@ -154,7 +154,7 @@ const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
 
 // 设置WebSocket连接
-const setupWebSocket = (sessionId: string) => {
+const setupWebSocket = (sessionId: number) => {
   // 关闭已存在的连接
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     ws.value.close();

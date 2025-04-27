@@ -182,6 +182,7 @@ const signOut = async () => {
   justify-content: center;
   padding: 16px;
   margin-top: 64px;
+  background-color: white; /* Add a background color */
 }
 
 .content-inner {
