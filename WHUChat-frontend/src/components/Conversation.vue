@@ -858,13 +858,14 @@ watch(
   right: 0;
   width: 100%;
   z-index: 100;
-  background-color: var(--v-theme-surface);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 添加阴影，增加层次感 */
 }
 
 .message-control-panel {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  background-color: var(--v-theme-surface);
+  background-color: var(--v-theme-surface, white);
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(100px);
   /* 确保面板不会超出屏幕底部 */
   max-height: calc(100vh - 50px);
   overflow-y: auto;

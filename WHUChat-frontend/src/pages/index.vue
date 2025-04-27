@@ -98,6 +98,7 @@ onMounted(async () => {
   // @ts-ignore
   if (route.params.id) {
     conversation.value.loadingMessages = true;
+    // TODO: 后面有空可以重构一下，把分散在 Conversation.vue 和 NavigationDrawer.vue 的初始化集中到这里
     // await loadConversation();
     // await loadMessage();
     conversation.value.loadingMessages = false;
@@ -110,6 +111,7 @@ onMounted(async () => {
 //     createNewConversation();
 //   }
 // });
+
 const user = useUser(); // 获取用户信息
 // 设置对话框控制
 const settingsDialogOpen = ref(false);
@@ -119,7 +121,7 @@ const openSettings = () => {
   settingsDialogOpen.value = true;
 };
 
-// 退出登录
+// TODO: 退出登录，需要适配我们的接口和登录页面。注意 NavDrawer 里也有这个，可能重了
 const signOut = async () => {
   // 调用退出登录API
   const { data, error } = await useAuthFetch("/api/account/logout/", {
