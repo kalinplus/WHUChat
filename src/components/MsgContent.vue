@@ -2,7 +2,9 @@
 import hljs from "highlight.js";
 import MarkdownIt from "markdown-it";
 import copy from "copy-to-clipboard";
-import mathjax3 from "markdown-it-mathjax3";
+// import mathjax3 from "markdown-it-mathjax3";
+import katex from "markdown-it-katex";
+import "katex/dist/katex.min.css";
 
 const md = new MarkdownIt({
   linkify: true,
@@ -13,7 +15,8 @@ const md = new MarkdownIt({
     }</code></pre>`;
   },
 });
-md.use(mathjax3);
+md.use(katex);
+// md.use(mathjax3);
 
 const props = defineProps({
   message: {
@@ -163,10 +166,10 @@ onMounted(() => {
 }
 
 /*MathJax*/
-.MathJax svg {
+/* .MathJax svg {
   max-width: 100%;
   overflow: auto;
-}
+} */
 .card_disabled {
   opacity: 0.5;
 }
