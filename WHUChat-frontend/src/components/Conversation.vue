@@ -9,7 +9,11 @@ import type {
   PromptMessage,
   ChatParameters,
   ChatRequestData,
+  BrowseMessagesResponse,
+  MessageItem,
+  FormattedMessage,
 } from "@/types/types";
+import axios from "axios";
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -150,14 +154,13 @@ const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
 
 // 设置WebSocket连接
-const setupWebSocket = (sessionId: string) => {
+const setupWebSocket = (sessionId: number) => {
   // 关闭已存在的连接
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     ws.value.close();
   }
 
   // 创建新的WebSocket连接
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
   // FIXME: encodeURIComponent 由 AI 生成，可能不需要
@@ -168,11 +171,13 @@ const setupWebSocket = (sessionId: string) => {
   // )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
   //   currentModel.value.model_id || "claude-3-haiku"
   // )}`;
-  // FIXME: 测试用 ws URL
-  const wsUrl = `ws://localhost:886/api/v1/ws/tran_ans?uuid=${encodeURIComponent(
-    stateStore.user?.id
+  // FIXME: 测试用 ws URL  这里都是硬编码
+  const wsUrl = `wss://${
+    import.meta.env.VITE_API_HOST
+  }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
+    1 || stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    currentModel.value.model_id || "claude-3-haiku"
+    1 || currentModel.value.model_id
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
@@ -183,8 +188,8 @@ const setupWebSocket = (sessionId: string) => {
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
 
   // 定义标记常量
-  const START_MARKER = "$$$$$$$$$$";
-  const END_MARKER = "##########";
+  const START_MARKER = "Contents:";
+  const END_MARKER = "&&&&&&******^^^^^^";
 
   // WebSocket事件处理
   ws.value.onopen = () => {
@@ -292,11 +297,27 @@ const fetchReply = async (message: any) => {
   }));
   // TODO: 对于新页面和首次对话（创建新会话），传给后端的请求有所不同。不知道这里解决没有
   // 构建请求参数
+  // const requestData: ChatRequestData = {
+  //   uuid: stateStore.user?.id, // 用户ID
+  //   session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
+  //   model_id: currentModel.value.model_id || "claude-3-haiku", // 模型ID
+  //   model_class: currentModel.value.model_class || "anthropic", // 模型大类
+  //   prompt: formattedPrompt,
+  //   parameters: {
+  //     temperature: 0.7,
+  //     frugalMode: frugalMode.value,
+  //     // 如果启用了网页搜索
+  //     ...(enableWebSearch.value && {
+  //       online: true,
+  //       ua: navigator.userAgent,
+  //     }),
+  //   } as ChatParameters,
+  // };
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.id, // 用户ID
-    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
-    model_id: currentModel.value.model_id || "claude-3-haiku", // 模型ID
-    model_class: currentModel.value.model_class || "anthropic", // 模型大类
+    uuid: 1, // 用户ID
+    session_id: null, // 会话ID，如果是新对话则为null
+    model_id: 1, // 模型ID
+    model_class: "anthropic", // 模型大类
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
@@ -320,18 +341,17 @@ const fetchReply = async (message: any) => {
 
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
-    const response = await fetch(
-      "http://localhost:886/api/v1/chat/send_message",
-      {
-        // const response = await fetch("/api/v1/chat/send_message", {
-        signal: ctrl.signal,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      }
-    );
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
+      // const response = await fetch("/api/v1/chat/send_message", {
+      signal: ctrl.signal,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // 添加这一行来显式携带 cookie
+      body: JSON.stringify(requestData),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
@@ -340,7 +360,7 @@ const fetchReply = async (message: any) => {
     const responseData = await response.json();
 
     // 检查是否有错误
-    if (responseData.error) {
+    if (responseData.error !== 0) {
       throw new Error(`API error: ${responseData.error}`);
     }
 
@@ -362,10 +382,12 @@ const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;
 } | null>(null);
 const scrollChatWindow = () => {
-  if (grab.value === null) {
-    return;
+  // @ts-ignore
+  const parent = grab.value?.parentElement;
+  if (parent) {
+    // 滚动到底部并向上调整 64px
+    parent.scrollTop = parent.scrollHeight - parent.clientHeight - 64;
   }
-  grab.value?.scrollIntoView({ behavior: "smooth" });
 };
 // 发送prompt
 const send = (message: any) => {
@@ -428,18 +450,23 @@ onUnmounted(() => {
   }
 });
 
-// 加载会话历史消息
+/**
+ * 加载当前会话的所有历史对话消息
+ */
 const loadConversationHistory = async () => {
   // 如果没有会话ID，则不需要加载历史
-  if (!props.conversation.id) {
+  if (!props.conversation?.id) {
     console.log("No conversation ID, skipping history load.");
-    // Ensure messages are cleared if navigating from a previous conversation
-    props.conversation.messages = [];
-    props.conversation.loadingMessages = false; // Ensure loading state is reset
+    // 确保消息被清空
+    if (props.conversation) {
+      props.conversation.messages = [];
+      props.conversation.loadingMessages = false;
+    }
     return;
   }
 
   console.log(`Loading history for session ID: ${props.conversation.id}`);
+
   try {
     // 设置加载状态
     props.conversation.loadingMessages = true;
@@ -448,90 +475,90 @@ const loadConversationHistory = async () => {
     props.conversation.messages = [];
 
     // 构建请求数据
+    // const requestData = {
+    //   uuid: stateStore.user?.id || 1,
+    //   session_id: props.conversation.id || 16,
+    // };
+    // TODO: 这里要用正常逻辑，不能硬编码
     const requestData = {
-      // API文档说是int，但示例值是string，且之前的代码用了string。确认后端实际需要。
-      // 假设后端需要string或能处理string
-      uuid: stateStore.user?.id || 0, // 使用真实用户ID或默认值 0
-      session_id: props.conversation.id || 0,
+      uuid: 1,
+      session_id: 17,
     };
 
-    // 发送请求获取历史消息
-    // FIXME: 使用环境变量或配置管理基础 URL
-    const baseUrl = "http://localhost:886"; // 或者从配置读取
-    const response = await fetch(`${baseUrl}/api/v1/chat/browse_messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // 如果需要认证，添加 Authorization header
-        // 'Authorization': `Bearer ${your_token}`
-      },
-      body: JSON.stringify(requestData),
-    });
-
-    if (!response.ok) {
-      // Try to get error details from response body if possible
-      let errorBody = null;
-      try {
-        errorBody = await response.json();
-      } catch (e) {
-        /* Ignore parsing error */
+    // 使用axios发送请求获取历史消息
+    // TODO: 可能要改
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const response = await axios.post(
+      `${baseUrl}/api/v1/chat/browse_messages`,
+      requestData,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          // 如果需要认证，添加 Authorization header
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+        withCredentials: true, // 添加这一行来显式携带 cookie
       }
-      console.error("HTTP Error Response:", errorBody);
-      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-    }
+    );
 
-    const responseData = await response.json();
-    console.log("History Response Data:", responseData);
+    console.log("History Response Data:", response.data);
 
     // 检查后端返回的业务错误
-    // API文档示例是2002，但成功时是0？假设0是成功
-    if (responseData.error !== 0 && responseData.error !== undefined) {
-      throw new Error(`API error code: ${responseData.error}`);
+    if (response.data.error !== 0) {
+      throw new Error(`API error code: ${response.data.error}`);
     }
 
     // 处理返回的消息，转换为组件需要的格式
-    if (responseData.messages && Array.isArray(responseData.messages)) {
-      const formattedMessages = responseData.messages.map(
-        (backendMsg: any, index: number) => {
-          let messageContent = "";
-          let messageType = "text"; // Default to text
-          let imageUrl = null;
+    if (response.data.messages && Array.isArray(response.data.messages)) {
+      const formattedMessages: FormattedMessage = response.data.messages.map(
+        (backendMsg: MessageItem) => {
+          // 根据返回数据判断是否为机器人消息
+          // 通常 role 为 "assistant" 或 sender 不为 "user" 时为机器人消息
+          const isBot =
+            backendMsg.prompt?.role === "assistant" ||
+            backendMsg.sender === "assistant" ||
+            backendMsg.sender !== "user";
 
-          // Process the prompt array to find text and image content
-          if (backendMsg.prompt && Array.isArray(backendMsg.prompt)) {
-            for (const part of backendMsg.prompt) {
-              if (part.type === "text" && part.content) {
-                messageContent = part.content; // Prioritize text content
+          // 获取消息内容
+          let messageContent = "";
+          let messageType = "text"; // 默认为文本
+
+          // 处理 prompt 中的内容
+          if (backendMsg.prompt) {
+            if (typeof backendMsg.prompt === "object") {
+              // 处理对象形式的 prompt
+              if (backendMsg.prompt.content) {
+                messageContent = backendMsg.prompt.content;
               }
-              if (part.type === "image" && part.content && part.content.url) {
-                imageUrl = part.content.url;
-                // If only image exists, set type to image
-                if (!messageContent) {
-                  messageType = "image";
-                  messageContent = imageUrl; // Use URL as content for image type
+              // 未来可能会有图片处理逻辑
+              // if (backendMsg.prompt.image_url) {...}
+            } else if (Array.isArray(backendMsg.prompt)) {
+              // 处理数组形式的 prompt (向后兼容)
+              for (const part of backendMsg.prompt) {
+                if (part.type === "text" && part.content) {
+                  messageContent = part.content;
+                } else if (part.content) {
+                  // 直接取content (适应不同结构)
+                  messageContent = part.content;
                 }
               }
-              // If both text and image exist, current structure prioritizes text.
-              // If image should take precedence, adjust logic here.
             }
           }
 
-          // Fallback if prompt processing yields no content (should ideally not happen)
-          if (!messageContent && !imageUrl) {
-            messageContent = "[Empty Message]";
+          // 如果没有找到内容，使用备用值
+          if (!messageContent) {
+            messageContent = "[无内容]";
           }
 
-          // Create the frontend message object
+          // 创建前端消息对象
           return {
-            // API doesn't provide a unique message ID, using index as key fallback
-            // Consider asking backend to add a unique message_id field
-            id: backendMsg.message_id || `history-${index}`, // Use message_id if backend adds it
-            is_bot: backendMsg.is_bot === true, // Ensure boolean comparison
+            id: backendMsg.id || `history-${backendMsg.id || Date.now()}`,
+            is_bot: isBot,
             message: messageContent,
             message_type: messageType,
-            // Optionally store model info if needed for display later
             model_id: backendMsg.model_id,
             model_class: backendMsg.model_class,
+            timestamp: backendMsg.timestamp || new Date().toISOString(),
           };
         }
       );
@@ -539,15 +566,9 @@ const loadConversationHistory = async () => {
       // 更新 conversation 的 messages 数组
       props.conversation.messages = formattedMessages;
       console.log("Formatted Messages:", props.conversation.messages);
-
-      // 更新会话标题 (如果接口返回了)
-      // Assuming session_info might be added later based on previous discussion
-      if (responseData.session_info && responseData.session_info.topic) {
-        props.conversation.topic = responseData.session_info.topic;
-      }
     } else {
       console.log("No messages found in the response.");
-      props.conversation.messages = []; // Ensure messages array is empty
+      props.conversation.messages = []; // 确保消息数组为空
     }
 
     // 完成加载
@@ -562,9 +583,12 @@ const loadConversationHistory = async () => {
   } catch (error: any) {
     console.error("Failed to load conversation history:", error);
     showSnackbar(`加载历史消息失败: ${error.message || error}`);
-    props.conversation.loadingMessages = false;
-    // 确保即使出错也清空了消息，避免显示旧会话的内容
-    props.conversation.messages = [];
+
+    if (props.conversation) {
+      props.conversation.loadingMessages = false;
+      // 确保即使出错也清空消息，避免显示旧会话内容
+      props.conversation.messages = [];
+    }
   }
 };
 
@@ -572,213 +596,233 @@ const loadConversationHistory = async () => {
 watch(
   () => props.conversation.id,
   (newId, oldId) => {
-    // Only load if the ID is valid and actually changed, or if it's the initial load with a valid ID
-    // oldId 等于 null，意味着这是个新对话
-    if (
-      newId !== null &&
-      newId !== undefined &&
-      newId !== oldId &&
-      oldId !== null
-    ) {
+    console.log(`Conversation ID changed: ${oldId} -> ${newId}`);
+
+    // 如果新ID有效且与旧ID不同，则加载历史
+    if (newId && newId !== oldId && oldId !== null) {
       loadConversationHistory();
-    } else if (newId === null && oldId !== null) {
-      // Handle case where user navigates to "new chat" (ID becomes null)
+    }
+    // 如果新ID为null（创建新对话）
+    else if (newId === null) {
       props.conversation.messages = [];
       props.conversation.loadingMessages = false;
     }
+    // 如果首次加载时已有ID（处理直接通过URL访问的情况）
+    else if (newId && oldId === undefined) {
+      loadConversationHistory();
+    }
   },
-  { immediate: true } // 组件挂载时也执行一次, 会加载初始ID对应的历史
+  { immediate: true }
+);
+// 判断是否有历史消息
+const hasMessages = computed(
+  () =>
+    props.conversation &&
+    props.conversation.messages &&
+    props.conversation.messages.length > 0
 );
 </script>
 
 <template>
-  <!-- 渲染聊天气泡部分 -->
-  <div v-if="conversation">
-    <div v-if="conversation.loadingMessages" class="text-center">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <div class="mt-2">{{ $t("loadingHistoryMessages") }}</div>
-    </div>
-    <div v-else>
-      <div v-if="conversation.messages" ref="chatWindow">
-        <v-container>
-          <v-row>
-            <v-col
-              v-for="(message, index) in conversation.messages"
-              :key="index"
-              cols="12"
-            >
-              <div
-                class="d-flex align-center"
-                :class="message.is_bot ? 'justify-start' : 'justify-end'"
+  <!-- 主容器，添加适当的底部内边距来容纳固定在底部的输入框 -->
+  <div class="chat-container">
+    <!-- 渲染聊天气泡部分 -->
+    <div v-if="hasMessages" class="messages-area">
+      <div v-if="conversation.loadingMessages" class="text-center">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
+        <div class="mt-2">{{ $t("loadingHistoryMessages") }}</div>
+      </div>
+      <div v-else class="messages-content">
+        <div v-if="conversation.messages" ref="chatWindow">
+          <v-container>
+            <v-row>
+              <v-col
+                v-for="(message, index) in conversation.messages"
+                :key="index"
+                cols="12"
               >
-                <MessageActions
-                  v-if="!message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-                <MsgContent
-                  :message="message"
-                  :index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-                <MessageActions
-                  v-if="message.is_bot"
-                  :message="message"
-                  :message-index="index"
-                  :use-prompt="usePrompt"
-                  :delete-message="deleteMessage"
-                />
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
+                <div
+                  class="d-flex align-center"
+                  :class="message.is_bot ? 'justify-start' : 'justify-end'"
+                >
+                  <MessageActions
+                    v-if="!message.is_bot"
+                    :message="message"
+                    :message-index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                  <MsgContent
+                    :message="message"
+                    :index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                  <MessageActions
+                    v-if="message.is_bot"
+                    :message="message"
+                    :message-index="index"
+                    :use-prompt="usePrompt"
+                    :delete-message="deleteMessage"
+                  />
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
 
-        <div ref="grab" class="w-100" style="height: 1px"></div>
+          <div ref="grab" class="w-100" style="height: 1px"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 底部发消息、选配置部分 -->
-  <v-footer app class="footer">
-    <v-card flat width="100%" class="message-control-panel pa-3">
-      <div class="d-flex flex-column">
-        <!-- 上部分：消息编辑区和停止按钮 -->
-        <div class="d-flex align-center">
-          <v-btn
-            v-show="fetchingResponse"
-            @click="stop"
-            class="mr-3"
-            icon
-            color="error"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          <!-- MsgEditor 组件 -->
-          <MsgEditor
-            ref="editor"
-            :send-message="send"
-            :disabled="fetchingResponse"
-            :loading="fetchingResponse"
-          />
-        </div>
-
-        <!-- 下部分：功能区域 -->
-        <div class="d-flex align-center flex-wrap mt-2">
-          <Prompt
-            v-show="!fetchingResponse"
-            :use-prompt="usePrompt"
-            class="mr-2"
-          />
-
-          <!-- 模型选择按钮 -->
-          <v-btn
-            variant="outlined"
-            rounded="pill"
-            size="small"
-            class="mr-2 my-1 model-select-btn"
-            prepend-icon="mdi-cpu"
-            @click="showModelSelector = true"
-            style="margin-left: 10px"
-          >
-            <div class="d-flex align-center">
-              <v-avatar
-                size="20"
-                class="mr-1"
-                v-if="stateStore.currentModel?.logo"
-              >
-                <v-img
-                  :src="stateStore.currentModel.logo"
-                  alt="Model logo"
-                ></v-img>
-              </v-avatar>
-              <span>{{
-                stateStore.currentModel?.name || t("selectModel")
-              }}</span>
-            </div>
-            <template v-slot:append>
-              <v-icon size="x-small" class="ml-1">mdi-chevron-down</v-icon>
-            </template>
-          </v-btn>
-
-          <!-- 网页搜索按钮 -->
-          <v-btn
-            v-if="settings.enableWebSearch === true"
-            :color="enableWebSearch ? 'primary' : ''"
-            variant="outlined"
-            rounded="pill"
-            size="small"
-            class="mr-2 my-1"
-            prepend-icon="mdi-web"
-            @click="enableWebSearch = !enableWebSearch"
-          >
-            {{ t("webSearch") }}
-            <template v-slot:append>
-              <v-icon
-                size="x-small"
-                :color="enableWebSearch ? 'aliceblue' : ''"
-                class="ml-1"
-              >
-                {{
-                  enableWebSearch ? "mdi-check-circle" : "mdi-circle-outline"
-                }}
-              </v-icon>
-            </template>
-          </v-btn>
-
-          <!-- 节俭模式按钮 -->
-          <div v-if="settings.frugalMode === true" class="d-flex align-center">
+    <!-- 底部发消息、选配置部分 - 使用固定定位 -->
+    <div class="footer-fixed" :class="{ 'with-drawer': stateStore.drawer }">
+      <v-card flat width="100%" class="message-control-panel pa-3">
+        <div class="d-flex flex-column">
+          <!-- 上部分：消息编辑区和停止按钮 -->
+          <div class="d-flex align-center">
             <v-btn
-              :color="frugalMode ? 'primary' : ''"
+              v-show="fetchingResponse"
+              @click="stop"
+              class="mr-3"
+              color="error"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+            <!-- MsgEditor 组件 -->
+            <MsgEditor
+              ref="editor"
+              :send-message="send"
+              :disabled="fetchingResponse"
+              :loading="fetchingResponse"
+            />
+          </div>
+
+          <!-- 下部分：功能区域 -->
+          <div class="d-flex align-center flex-wrap mt-2">
+            <!-- 原有按钮不变... -->
+            <Prompt
+              v-show="!fetchingResponse"
+              :use-prompt="usePrompt"
+              class="mr-2"
+            />
+
+            <!-- 模型选择按钮 -->
+            <v-btn
+              variant="outlined"
+              rounded="pill"
+              size="small"
+              class="mr-2 my-1 model-select-btn"
+              prepend-icon="mdi-cpu"
+              @click="showModelSelector = true"
+              style="margin-left: 10px"
+            >
+              <div class="d-flex align-center">
+                <v-avatar
+                  size="20"
+                  class="mr-1"
+                  v-if="stateStore.currentModel?.logo"
+                >
+                  <v-img
+                    :src="stateStore.currentModel.logo"
+                    alt="Model logo"
+                  ></v-img>
+                </v-avatar>
+                <span>{{
+                  stateStore.currentModel?.name || t("selectModel")
+                }}</span>
+              </div>
+              <template v-slot:append>
+                <v-icon size="x-small" class="ml-1">mdi-chevron-down</v-icon>
+              </template>
+            </v-btn>
+
+            <!-- 网页搜索按钮 -->
+            <v-btn
+              v-if="settings.enableWebSearch === true"
+              :color="enableWebSearch ? 'primary' : ''"
               variant="outlined"
               rounded="pill"
               size="small"
               class="mr-2 my-1"
-              prepend-icon="mdi-lightning-bolt"
-              @click="frugalMode = !frugalMode"
+              prepend-icon="mdi-web"
+              @click="enableWebSearch = !enableWebSearch"
             >
-              {{ t("frugalMode") }}
+              {{ t("webSearch") }}
               <template v-slot:append>
                 <v-icon
                   size="x-small"
-                  :color="frugalMode ? 'aliceblue' : ''"
+                  :color="enableWebSearch ? 'aliceblue' : ''"
                   class="ml-1"
                 >
-                  {{ frugalMode ? "mdi-check-circle" : "mdi-circle-outline" }}
+                  {{
+                    enableWebSearch ? "mdi-check-circle" : "mdi-circle-outline"
+                  }}
                 </v-icon>
               </template>
             </v-btn>
 
-            <v-tooltip
-              :text="t('frugalModeTip')"
-              location="top"
-              max-width="300"
+            <!-- 节俭模式按钮 -->
+            <div
+              v-if="settings.frugalMode === true"
+              class="d-flex align-center"
             >
-              <template v-slot:activator="{ props }">
-                <v-btn
-                  icon
-                  variant="text"
-                  v-bind="props"
-                  class="ml-0"
-                  density="comfortable"
-                  size="small"
-                >
-                  <v-icon color="grey" size="small"
-                    >mdi-help-circle-outline</v-icon
+              <v-btn
+                :color="frugalMode ? 'primary' : ''"
+                variant="outlined"
+                rounded="pill"
+                size="small"
+                class="mr-2 my-1"
+                prepend-icon="mdi-lightning-bolt"
+                @click="frugalMode = !frugalMode"
+              >
+                {{ t("frugalMode") }}
+                <template v-slot:append>
+                  <v-icon
+                    size="x-small"
+                    :color="frugalMode ? 'aliceblue' : ''"
+                    class="ml-1"
                   >
-                </v-btn>
-              </template>
-            </v-tooltip>
+                    {{ frugalMode ? "mdi-check-circle" : "mdi-circle-outline" }}
+                  </v-icon>
+                </template>
+              </v-btn>
+
+              <v-tooltip
+                :text="t('frugalModeTip')"
+                location="top"
+                max-width="300"
+              >
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    icon
+                    variant="text"
+                    v-bind="props"
+                    class="ml-0"
+                    density="comfortable"
+                    size="small"
+                  >
+                    <v-icon color="grey" size="small"
+                      >mdi-help-circle-outline</v-icon
+                    >
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- 引入模型选择器组件 -->
-      <ModelSelector v-model="showModelSelector" @select="handleModelSelect" />
-    </v-card>
-  </v-footer>
-
+        <!-- 模型选择器组件 -->
+        <ModelSelector
+          v-model="showModelSelector"
+          @select="handleModelSelect"
+        />
+      </v-card>
+    </div>
+  </div>
+  <!-- 临时提示组件 -->
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
 
@@ -792,25 +836,112 @@ watch(
 </template>
 
 <style scoped>
-.footer {
+/* 主容器 */
+.chat-container {
+  position: relative;
+  min-height: 0;
   width: 100%;
-  padding: 0;
+  overflow-x: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--chat-footer-height) + 16px); /* 底部留出空间 */
+  --chat-footer-height: 140px; /* 根据底部控制面板的实际高度调整 */
+  transition: padding-left 0.5s ease;
+}
+
+.chat-container.with-drawer {
+  padding-left: 300px;
+}
+
+/* 在小屏幕上，侧边栏可能是临时的覆盖模式，不需要调整宽度 */
+@media (max-width: 960px) {
+  .footer-fixed.with-drawer {
+    left: 0;
+    width: 100%;
+  }
+  .chat-container.with-drawer {
+    padding-left: 0;
+  }
+}
+
+/* 添加一个占位区域，仅当没有消息时显示 */
+.empty-chat-placeholder {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: auto;
+}
+
+/* 消息区域 */
+.messages-area {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  padding-bottom: 20px; /* 额外底部空间，避免最后一条消息太靠近底部 */
+}
+
+.messages-content {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 固定在底部的页脚 */
+.footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 添加阴影，增加层次感 */
+}
+/* 侧边栏打开时的样式调整 */
+.footer-fixed.with-drawer {
+  left: 300px;
+  width: calc(100% - 300px);
 }
 
 .message-control-panel {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
-  background-color: var(--v-theme-surface);
+  background-color: var(--v-theme-surface, white);
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(100px);
+  /* 确保面板不会超出屏幕底部 */
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
 }
 
 /* 深色主题适配 */
 :deep(.v-theme--dark) .message-control-panel {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* 确保按钮在小屏幕上合理换行 */
 @media (max-width: 600px) {
+  .chat-container {
+    --chat-footer-height: 160px; /* 在小屏幕上可能需要更多空间 */
+  }
+
   .d-flex.align-center.flex-wrap {
     justify-content: space-between;
+  }
+
+  /* 在移动设备上可能需要调整一些间距和大小 */
+  .message-control-panel {
+    padding: 10px !important;
+  }
+}
+
+/* 针对小屏幕设备的额外样式 - 当键盘弹出时 */
+@media screen and (max-height: 450px) {
+  .footer-fixed {
+    position: sticky; /* 在键盘弹出时改为sticky定位 */
+    bottom: 0;
+  }
+
+  .chat-container {
+    padding-bottom: 16px; /* 减小底部填充 */
   }
 }
 </style>

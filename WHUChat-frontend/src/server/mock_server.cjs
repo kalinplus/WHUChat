@@ -1,6 +1,6 @@
 // mock-server.js
 const express = require("express");
-const http = require("http");
+const https = require("https");
 const WebSocket = require("ws");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -39,68 +39,215 @@ app.post("/api/v1/chat/browse_messages", (req, res) => {
   }
   // 模拟不同会话返回不同历史记录
   let mockMessages = [];
-  if (uuid === 0 && session_id === 1) {
+  if (uuid == 0 && session_id == 1) {
     mockMessages = [
       {
-        uuid: 0,
-        session_id: 1,
-        is_bot: false, // 用户消息
-        prompt: [{ type: "text", content: "你好，这是一个历史消息。" }],
+        // 用户消息
+        id: 10,
         model_id: null,
-        model_class: null,
-        // 其他字段根据需要添加，如 parameters (如果后端存储了)
+        prompt: {
+          content: "你好，这是一个历史消息。",
+          role: "user",
+        },
+        sender: "user",
+        session_id: 1,
+        uuid: 0,
       },
       {
-        uuid: 0,
-        session_id: 1,
-        is_bot: true, // 机器人消息
-        prompt: [
-          { type: "text", content: "是的，我是历史记录中的机器人回复。" },
-        ],
+        // 机器人消息
+        id: 11,
         model_id: 3,
+        prompt: {
+          content: "是的，我是历史记录中的机器人回复。",
+          role: "assistant",
+        },
+        sender: "assistant",
+        session_id: 1,
+        uuid: 0,
         model_class: "anthropic",
       },
       {
-        uuid: 0,
-        session_id: 1,
-        is_bot: false,
+        // 用户带图片的消息 - 这里需要特殊处理，因为图片需要用数组格式
+        id: 12,
+        model_id: null,
         prompt: [
           {
             type: "image",
             content: { url: "https://via.placeholder.com/150/92c952" },
-          }, // 模拟图片
-          { type: "text", content: "这是什么图片？(历史)" }, // 模拟图片+文字
+          },
+          {
+            type: "text",
+            content: "这是什么图片？(历史)",
+          },
         ],
-        model_id: null,
-        model_class: null,
+        sender: "user",
+        session_id: 1,
+        uuid: 0,
       },
       {
-        uuid: 0,
-        session_id: 1,
-        is_bot: true,
-        prompt: [{ type: "text", content: "这是一张占位符图片。(历史)" }],
+        // 机器人回复
+        id: 13,
         model_id: 5,
+        prompt: {
+          content: "这是一张占位符图片。(历史)",
+          role: "assistant",
+        },
+        sender: "assistant",
+        session_id: 1,
+        uuid: 0,
         model_class: "openai",
+      },
+    ];
+  } else if (uuid === 0 && session_id === 8) {
+    // 额外添加一个测试会话
+    mockMessages = [
+      {
+        id: 20,
+        model_id: 1,
+        prompt: {
+          content: "这是第二个测试会话",
+          role: "user",
+        },
+        sender: "user",
+        session_id: 8,
+        uuid: 0,
+      },
+      {
+        id: 21,
+        model_id: 1,
+        prompt: {
+          content: "你好，这是第二个会话的回复",
+          role: "assistant",
+        },
+        sender: "assistant",
+        session_id: 8,
+        uuid: 0,
+      },
+      {
+        id: 22,
+        model_id: 1,
+        prompt: {
+          content: "测试后续问题",
+          role: "user",
+        },
+        sender: "user",
+        session_id: 8,
+        uuid: 0,
+      },
+      {
+        id: 23,
+        model_id: 1,
+        prompt: {
+          content: "ceshi",
+          role: "assistant",
+        },
+        sender: "assistant",
+        session_id: 8,
+        uuid: 0,
       },
     ];
   } else {
     mockMessages = [];
   }
-
   // 返回模拟的历史对话数据，结构依照文档
   res.json({
     error: 0,
-    messages: mockMessages
+    messages: mockMessages,
   });
 });
 
+// 模拟获取用户所有会话列表的接口
+app.post("/api/v1/chat/history", (req, res) => {
+  console.log("Received request for /api/v1/chat/history:", req.body);
+  const { uuid } = req.body;
+
+  // 验证请求参数
+  if (uuid === undefined || uuid === null) {
+    console.log("Missing uuid parameter");
+    return res
+      .status(400)
+      .json({ error: 2001, message: "Missing uuid parameter" });
+  }
+
+  // 为不同的用户返回不同的会话列表
+  let mockSessions = [];
+
+  // 默认用户 uuid=0 的会话列表
+  if (uuid === 0) {
+    mockSessions = [
+      {
+        uuid: 0,
+        id: 1,
+        title: "历史消息测试会话",
+        updated_at: "2025-04-20T10:30:45Z",
+      },
+      {
+        uuid: 0,
+        id: 8,
+        title: "第二个测试会话",
+        updated_at: "2025-04-22T15:20:10Z",
+      },
+      {
+        uuid: 0,
+        id: 12,
+        title: "Claude-3 Haiku 对话",
+        updated_at: "2025-04-21T08:45:30Z",
+      },
+      {
+        uuid: 0,
+        id: 15,
+        title: "Gemini 测试会话",
+        updated_at: "2025-04-23T09:15:22Z",
+      },
+    ];
+  }
+  // 用户 uuid=1 的会话列表
+  else if (uuid === 1) {
+    mockSessions = [
+      {
+        uuid: 1,
+        id: 25,
+        title: "项目讨论",
+        updated_at: "2025-04-22T11:45:30Z",
+      },
+      {
+        uuid: 1,
+        id: 26,
+        title: "代码优化建议",
+        updated_at: "2025-04-23T14:20:15Z",
+      },
+    ];
+  }
+  // 其他用户返回空列表
+  else {
+    mockSessions = [];
+  }
+
+  // 按更新时间降序排序（最新的在前面）
+  mockSessions.sort((a, b) => {
+    return new Date(b.updated_at) - new Date(a.updated_at);
+  });
+
+  // 返回模拟的会话列表数据
+  res.json({
+    error: 0,
+    sessions: mockSessions,
+  });
+});
+
+const fs = require("fs");
+const httpsOptions = {
+  key: fs.readFileSync("src/server/server.key"),
+  cert: fs.readFileSync("src/server/server.crt"),
+};
+
 // 创建HTTP服务器
-const server = http.createServer(app);
+const server = https.createServer(httpsOptions, app);
 
 // 创建WebSocket服务器
 const wss = new WebSocket.Server({
   server,
-  path: "/api/v1/ws/tran_ans",
+  path: "/api/v1/ws/trans_ans",
 });
 
 // 处理WebSocket连接
@@ -108,7 +255,7 @@ wss.on("connection", (ws, req) => {
   console.log("WebSocket connected");
 
   // 解析URL查询参数
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = new URL(req.url, `https://${req.headers.host}`);
   console.log("Connection params:", {
     uuid: url.searchParams.get("uuid"),
     session_id: url.searchParams.get("session_id"),
@@ -164,6 +311,6 @@ wss.on("connection", (ws, req) => {
 });
 
 // 启动服务器
-server.listen(886, () => {
-  console.log("Mock server running on http://localhost:886");
+server.listen(8081, () => {
+  console.log("Mock server running on https://127.0.0.1:8081");
 });

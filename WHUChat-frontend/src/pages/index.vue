@@ -13,32 +13,66 @@ const route = useRoute();
 const router = useRouter();
 
 const conversation = ref<{
-  id: number | null;  // 当前选择的会话的 id
+  id: number | null; // 当前选择的会话的 id
   messages: any[];
+  loadingMessages: boolean;
   [key: string]: any;
 }>(getDefaultConversationData());
 const routerParams = route.params as { id?: number };
 
-// TODO: 每个对话的标识url存在params的id里
-const loadConversation = async () => {
-  const { data, error } = await useAuthFetch(
-    "/api/chat/conversations/" + routerParams.id
-  );
-  if (!error.value) {
-    conversation.value = Object.assign(conversation.value, data.value);
-  }
-};
+// 监听路由参数变化
+watch(
+  () => route.params,
+  async (params) => {
+    // @ts-ignore
+    const userId = params.user;
+    // @ts-ignore
+    const sessionId = params.session_id;
 
-const loadMessage = async () => {
-  const { data, error } = await useAuthFetch(
-    "/api/chat/messages/?conversationId=" + routerParams.id
-  );
-  if (!error.value) {
-    conversation.value.messages =
-      data.value as typeof conversation.value.messages;
-    conversation.value.id = routerParams.id ?? null;
-  }
-};
+    console.log(
+      `Route params changed: user=${userId}, session_id=${sessionId}`
+    );
+
+    if (sessionId) {
+      // 有会话ID，加载特定会话
+      conversation.value = {
+        id: Number(sessionId),
+        messages: [],
+        loadingMessages: true,
+      };
+    } else {
+      // 无会话ID，创建新会话
+      conversation.value = {
+        id: null,
+        messages: [],
+        loadingMessages: false,
+      };
+    }
+  },
+  { immediate: true } // 组件创建时立即执行一次
+);
+
+// TODO: 每个对话的标识url存在params的id里
+// FIXME：比起在两个子组件（NavDrawer和Conversation里分别请求，这里请求时
+// const loadConversation = async () => {
+//   const { data, error } = await useAuthFetch(
+//     "/api/chat/conversations/" + routerParams.id
+//   );
+//   if (!error.value) {
+//     conversation.value = Object.assign(conversation.value, data.value);
+//   }
+// };
+
+// const loadMessage = async () => {
+//   const { data, error } = await useAuthFetch(
+//     "/api/chat/messages/?conversationId=" + routerParams.id
+//   );
+//   if (!error.value) {
+//     conversation.value.messages =
+//       data.value as typeof conversation.value.messages;
+//     conversation.value.id = routerParams.id ?? null;
+//   }
+// };
 
 const createNewConversation = () => {
   if (route.path !== "/") {
@@ -64,8 +98,9 @@ onMounted(async () => {
   // @ts-ignore
   if (route.params.id) {
     conversation.value.loadingMessages = true;
-    await loadConversation();
-    await loadMessage();
+    // TODO: 后面有空可以重构一下，把分散在 Conversation.vue 和 NavigationDrawer.vue 的初始化集中到这里
+    // await loadConversation();
+    // await loadMessage();
     conversation.value.loadingMessages = false;
   }
 });
@@ -76,6 +111,7 @@ onMounted(async () => {
 //     createNewConversation();
 //   }
 // });
+
 const user = useUser(); // 获取用户信息
 // 设置对话框控制
 const settingsDialogOpen = ref(false);
@@ -85,7 +121,7 @@ const openSettings = () => {
   settingsDialogOpen.value = true;
 };
 
-// 退出登录
+// TODO: 退出登录，需要适配我们的接口和登录页面。注意 NavDrawer 里也有这个，可能重了
 const signOut = async () => {
   // 调用退出登录API
   const { data, error } = await useAuthFetch("/api/account/logout/", {
@@ -105,6 +141,7 @@ const signOut = async () => {
 <template>
   <v-app>
     <AppBar
+      class="appbar"
       @open-settings="openSettings"
       @sign-in="signIn"
       @sign-out="signOut"
@@ -123,6 +160,7 @@ const signOut = async () => {
           :class="{ 'with-drawer': stateStore.drawer }"
         >
           <Welcome
+            :class="{ loading: conversation.loadingMessages }"
             v-if="!routerParams.id && conversation.messages.length === 0"
           />
           <Conversation :conversation="conversation" />
@@ -134,11 +172,19 @@ const signOut = async () => {
 </template>
 
 <style scoped>
+.appbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
 .content-wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 16px;
+  margin-top: 64px;
+  background-color: white; /* Add a background color */
 }
 
 .content-inner {
@@ -151,6 +197,43 @@ const signOut = async () => {
 .with-drawer {
   transform: translateX(150px / 2); /* 侧边栏宽度的一半 */
 }
+
+.loading {
+  position: relative; /* Needed to position the overlay */
+  min-height: 100px; /* Ensure the loading container has some height */
+}
+
+.loading::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Option 1: Solid color background */
+  /* background-color: rgba(255, 255, 255, 0.8); */ /* Example: Semi-transparent white */
+
+  /* Option 2: Blurred background */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.5
+  ); /* Light overlay helps blur visibility */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Safari support */
+
+  z-index: 1; /* Place overlay above the content behind, but below the spinner */
+}
+
+/* Ensure your actual loading indicator (spinner, text) is visible above the overlay */
+/* Example: If you have a spinner element inside the .loading container */
+/*
+.loading > .spinner-element {
+  position: relative; /* Or absolute, depending on your layout */
+/*  z-index: 2; /* Make sure spinner is on top of the overlay */
+/* }
+*/
 
 @media (max-width: 960px) {
   .with-drawer {

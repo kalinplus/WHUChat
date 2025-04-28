@@ -133,7 +133,7 @@ const errorCode = ref(0);
 
 // 验证码相关状态
 const countdown = ref(0);
-const timer = ref<NodeJS.Timeout | null>(null);
+const timer = ref<any>(null);
 const showAlertForVrfcode = ref(false);
 const loadingForVrfcode = ref(false);
 const errorMessage = ref("");
@@ -302,10 +302,16 @@ const handleSubmit = async () => {
     };
     console.log(JSON.stringify(encryptedData));
     // 发送注册请求
-    const result = await request.post(
-      "/api/v1/gate/register",
-      JSON.stringify(encryptedData)
-    );
+    const { data, error } = await useAuthFetch("/api/v1/gate/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      withCredentials: true, // 添加这一行来显式携带 cookie
+      body: JSON.stringify(encryptedData),
+    });
+
 
     // 处理响应
     if (result) {

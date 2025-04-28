@@ -2,7 +2,7 @@
 <template>
   <v-alert
     v-if="visible"
-    :type="type"
+    :type="type as any"
     class="mt-4 text-center animated fadeIn"
     dismissible
     @click:dismissible="handleClose"
@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps } from "vue";
 
 const props = defineProps({
   visible: {
@@ -33,7 +33,7 @@ const props = defineProps({
     type: String,
     default: "info",
     validator: (value) =>
-      ["info", "success", "warning", "error"].includes(value),
+      ["info", "success", "warning", "error"].includes(value as any),
   },
   message: {
     type: String,

@@ -15,7 +15,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
 import type { ConversationInfo, ConversationsResponse } from "@/types/types";
-import { logout } from "@/utils/auth";
+import { logout, getToken } from "@/utils/auth";
+import axios from "axios";
 
 const emit = defineEmits(["openSettings", "signOut"]);
 const stateStore = useStateStore();
@@ -72,11 +73,17 @@ const conversations = useConversations();
 
 const editingConversation = ref();
 const deletingConversationIndex = ref();
-
+/**
+ *  启动编辑模式
+ * @param index 会话id
+ */
 const editConversation = (index: number) => {
   editingConversation.value = conversations.value[index];
 };
-
+/**
+ *  保存已编辑的对话标题到服务器并更新本地数据
+ * @param index 会话id
+ */
 const updateConversation = async (index: number) => {
   editingConversation.value.updating = true;
   const { data, error } = await useAuthFetch(
@@ -95,7 +102,10 @@ const updateConversation = async (index: number) => {
   conversations.value[index].updating = false;
   editingConversation.value = false;
 };
-
+/**
+ *  删除会话
+ * @param index 会话id
+ */
 const deleteConversation = async (index: number) => {
   deletingConversationIndex.value = index;
   const { data, error } = await useAuthFetch(
@@ -118,14 +128,14 @@ const deleteConversation = async (index: number) => {
     }
   }
 };
-
-// 创建新对话函数
+/**
+ * 创建新会话
+ */
 const createNewConversation = () => {
-  // 或方法2: 直接调用路由
   if (route.path !== "/") {
-    return router.push("/?new");
+    return router.push("/");
   }
-  // 如果已经在主页面，则关闭抽屉以便让用户看到新会话界面
+  // 如果已经在主页面，只关闭抽屉
   drawer.value = false;
 };
 
@@ -135,9 +145,12 @@ const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
 };
-
-// TODO: 这个的api要换成我们的
+/**
+ *  获取指定会话的对话数据，只供 exportConversation 函数使用，用于导出会话数据
+ * @param conversation_id 会话id
+ */
 const loadMessage = async (conversation_id: number) => {
+  // TODO: 这个的api要换成我们的
   const { data, error } = await useAuthFetch(
     `/api/chat/messages/?conversationId=${conversation_id}`
   );
@@ -146,7 +159,10 @@ const loadMessage = async (conversation_id: number) => {
   }
   return error.value;
 };
-
+/**
+ *  导出会话中的对话数据
+ * @param index 会话id
+ */
 const exportConversation = async (index: number) => {
   let conversation = conversations.value[index];
   let data = {};
@@ -181,7 +197,7 @@ const exportConversation = async (index: number) => {
   document.body.removeChild(element);
 };
 
-// FIXME: 导入会话也可以先不考虑
+// FIXME: 导入会话可以先不考虑
 // const openImportFileChooser = async () => {
 //   let input_element = document.getElementById("import_conversation_input");
 //   input_element?.click();
@@ -230,43 +246,63 @@ const exportConversation = async (index: number) => {
 
 const deletingConversations = ref(false);
 const loadingConversations = ref(false);
-
+/**
+ * 加载所有历史会话的简单信息，用于显示在侧边栏
+ */
 const loadConversations = async () => {
   loadingConversations.value = true;
 
-  // 使用封装的 useAuthFetch
-  const { data, error, execute } = useAuthFetch<ConversationsResponse>(
-    "/api/v1/chat/history"
-  );
-
   try {
-    await execute(); // 手动执行请求
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const token = getToken();
 
-    // 只需要检查业务错误或通用错误
-    if (data.value && data.value.error !== 0) {
-      console.error("API Error:", data.value.error);
+    const response = await axios.post(
+      `${baseUrl}/api/v1/chat/history`,
+      // TODO: uuid 要和登录注册联动好，现在 1 是测试
+      { uuid: stateStore.user?.id || 1 },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        withCredentials: true,
+      }
+    );
+
+    // 成功获取数据
+    if (response.data && response.data.error === 0) {
+      // 按更新时间降序排序（最新的在最前面）
+      const sessions = response.data.sessions || [];
+      const sortedSessions = [...sessions].sort((a, b) => {
+        const dateA = new Date(a.updated_at);
+        const dateB = new Date(b.updated_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      stateStore.setConversations(sortedSessions);
+    } else {
+      // 业务逻辑错误
+      console.error("API Error:", response.data?.error);
       stateStore.setConversations([]);
-    } else if (error.value) {
-      // 401 错误已在 useAuthFetch 内部处理 (触发登出)
-      // 这里只需要处理其他类型的 fetch 错误
-      console.error("Fetch Error (non-401 or logout failed):", error.value);
-      stateStore.setConversations([]);
-    } else if (data.value) {
-      // 成功
-      stateStore.setConversations(data.value.sessions || []);
     }
   } catch (err) {
-    console.error("Error during fetch execution:", err);
+    // HTTP错误或网络错误
+    console.error("Error fetching conversations:", err);
+    // 处理401未授权错误
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      console.warn("Authentication error (401). Logging out...");
+      try {
+        await logout();
+      } catch (logoutErr) {
+        console.error("Logout failed:", logoutErr);
+      }
+    }
     stateStore.setConversations([]);
   } finally {
     loadingConversations.value = false;
   }
 };
-
-onMounted(() => {
-  loadConversations();
-});
-
+// TODO: 与登录注册功能和接口对接
 const signOut = async () => {
   const { data, error } = await useMyFetch("/api/account/logout/", {
     method: "POST",
@@ -282,14 +318,12 @@ onMounted(async () => {
 
 const drawer = useDrawer();
 
+// TODO: 陈致远做设置界面
 const currentThemeName = computed(() => {
   return theme.global.name.value;
 });
-
 const userAvatar = ref(null);
-
 const settingDialog = ref(false);
-// TODO: 陈致远做设置界面
 </script>
 
 <template>
@@ -329,8 +363,95 @@ const settingDialog = ref(false);
         {{ $t("newConversation") }}
       </v-btn>
     </div>
-
     <v-divider></v-divider>
+    <!-- 历史会话列表 -->
+    <div class="px-2">
+      <v-list>
+        <!-- 加载动画指示器 -->
+        <v-list-item v-show="loadingConversations">
+          <v-list-item-title class="d-flex justify-center">
+            <v-progress-circular indeterminate></v-progress-circular>
+          </v-list-item-title>
+        </v-list-item>
+      </v-list>
+      <!-- 历史会话列表 -->
+      <v-list>
+        <template
+          v-for="(conversation, cIdx) in conversations"
+          :key="conversation.id"
+        >
+          <v-list-item
+            base-color="primary"
+            rounded="xl"
+            v-if="
+              editingConversation && editingConversation.id === conversation.id
+            "
+          >
+            <!-- TODO: updateConversation 要和后端对接 -->
+            <v-text-field
+              v-model="editingConversation.topic"
+              :loading="editingConversation.updating"
+              variant="underlined"
+              append-icon="done"
+              hide-details
+              density="compact"
+              autofocus
+              @keyup.enter="updateConversation(cIdx)"
+              @click:append="updateConversation(cIdx)"
+            ></v-text-field>
+          </v-list-item>
+          <v-hover
+            v-if="
+              !editingConversation || editingConversation.id !== conversation.id
+            "
+            v-slot="{ isHovering, props }"
+          >
+            <v-list-item
+              rounded="xl"
+              base-color="primary"
+              :to="
+                conversation.id
+                  ? `/${stateStore.user?.id || '0'}/${conversation.id}`
+                  : '/'
+              "
+              v-bind="props"
+            >
+              <!-- TODO: editConversation 要和后端对接 -->
+              <!-- 这里是会话的标题 -->
+              <v-list-item-title>{{
+                conversation.title && conversation.title !== ""
+                  ? conversation.title
+                  : $t("defaultConversationTitle")
+              }}</v-list-item-title>
+              <template v-slot:append>
+                <div v-show="isHovering && conversation.id">
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    @click.prevent="editConversation(cIdx)"
+                  >
+                    <v-icon>mdi-pencil</v-icon>
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    :loading="deletingConversationIndex === cIdx"
+                    @click.prevent="deleteConversation(cIdx)"
+                    ><v-icon>mdi-trash-can</v-icon>
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    @click.prevent="exportConversation(cIdx)"
+                    ><v-icon>mdi-cloud-download</v-icon>
+                  </v-btn>
+                </div>
+              </template>
+            </v-list-item>
+          </v-hover>
+        </template>
+      </v-list>
+    </div>
     <!-- 用户信息 -->
     <template v-slot:prepend v-if="user">
       <v-list>
@@ -364,88 +485,6 @@ const settingDialog = ref(false);
 
       <v-divider></v-divider>
     </template>
-    <!-- 会话列表 -->
-    <div class="px-2">
-      <v-list>
-        <v-list-item v-show="loadingConversations">
-          <v-list-item-title class="d-flex justify-center">
-            <v-progress-circular indeterminate></v-progress-circular>
-          </v-list-item-title>
-        </v-list-item>
-      </v-list>
-
-      <v-list>
-        <template
-          v-for="(conversation, cIdx) in conversations"
-          :key="conversation.id"
-        >
-          <v-list-item
-            base-color="primary"
-            rounded="xl"
-            v-if="
-              editingConversation && editingConversation.id === conversation.id
-            "
-          >
-            <v-text-field
-              v-model="editingConversation.topic"
-              :loading="editingConversation.updating"
-              variant="underlined"
-              append-icon="done"
-              hide-details
-              density="compact"
-              autofocus
-              @keyup.enter="updateConversation(cIdx)"
-              @click:append="updateConversation(cIdx)"
-            ></v-text-field>
-          </v-list-item>
-          <v-hover
-            v-if="
-              !editingConversation || editingConversation.id !== conversation.id
-            "
-            v-slot="{ isHovering, props }"
-          >
-            <v-list-item
-              rounded="xl"
-              base-color="primary"
-              :to="conversation.id ? `/${conversation.id}` : '/'"
-              v-bind="props"
-            >
-              <v-list-item-title>{{
-                conversation.topic && conversation.topic !== ""
-                  ? conversation.topic
-                  : $t("defaultConversationTitle")
-              }}</v-list-item-title>
-              <template v-slot:append>
-                <div v-show="isHovering && conversation.id">
-                  <v-btn
-                    icon="edit"
-                    size="small"
-                    variant="text"
-                    @click.prevent="editConversation(cIdx)"
-                  >
-                  </v-btn>
-                  <v-btn
-                    icon="delete"
-                    size="small"
-                    variant="text"
-                    :loading="deletingConversationIndex === cIdx"
-                    @click.prevent="deleteConversation(cIdx)"
-                  >
-                  </v-btn>
-                  <v-btn
-                    icon="download"
-                    size="small"
-                    variant="text"
-                    @click.prevent="exportConversation(cIdx)"
-                  >
-                  </v-btn>
-                </div>
-              </template>
-            </v-list-item>
-          </v-hover>
-        </template>
-      </v-list>
-    </div>
     <!-- 底部 -->
     <template v-slot:append>
       <v-divider></v-divider>
@@ -457,6 +496,7 @@ const settingDialog = ref(false);
       />
     </template>
   </v-navigation-drawer>
+  <!-- 一个临时的消息提示，不管也行 -->
   <v-snackbar v-model="snackbar" multi-line location="top">
     {{ snackbarText }}
     <template v-slot:actions>
@@ -471,6 +511,7 @@ const settingDialog = ref(false);
       </v-btn>
     </template>
   </v-snackbar>
+  <!-- 导入对话，可以暂时不管 -->
   <!-- <input
     type="file"
     id="import_conversation_input"
