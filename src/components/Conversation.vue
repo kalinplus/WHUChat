@@ -502,7 +502,7 @@ const loadConversationHistory = async () => {
     // TODO: 这里要用正常逻辑，不能硬编码
     const requestData = {
       uuid: 1,
-      session_id: 17,
+      session_id: props.conversation.id,
     };
 
     // 使用axios发送请求获取历史消息

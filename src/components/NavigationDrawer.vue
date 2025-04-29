@@ -375,6 +375,7 @@ const settingDialog = ref(false);
         </v-list-item>
       </v-list>
       <!-- 历史会话列表 -->
+      <!-- v-for 中循环渲染，为每个会话项绑定了 conversation.id 可以使用 -->
       <v-list>
         <template
           v-for="(conversation, cIdx) in conversations"
@@ -411,7 +412,7 @@ const settingDialog = ref(false);
               base-color="primary"
               :to="
                 conversation.id
-                  ? `/${stateStore.user?.id || '0'}/${conversation.id}`
+                  ? `/${stateStore.user?.id || 0}/${conversation.id}`
                   : '/'
               "
               v-bind="props"
