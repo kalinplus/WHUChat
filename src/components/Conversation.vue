@@ -12,6 +12,7 @@ import type {
   BrowseMessagesResponse,
   MessageItem,
   FormattedMessage,
+  PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
 
@@ -494,19 +495,13 @@ const loadConversationHistory = async () => {
     // 清空现有消息，避免污染
     props.conversation.messages = [];
 
-    // 构建请求数据
-    // const requestData = {
-    //   uuid: stateStore.user?.id || 1,
-    //   session_id: props.conversation.id || 16,
-    // };
-    // TODO: 这里要用正常逻辑，不能硬编码
+    // TODO: uuid 这里要用正常逻辑，不能硬编码
     const requestData = {
-      uuid: 1,
+      uuid: 1 || stateStore.user,
       session_id: props.conversation.id,
     };
 
     // 使用axios发送请求获取历史消息
-    // TODO: 可能要改
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/browse_messages`,
@@ -514,30 +509,24 @@ const loadConversationHistory = async () => {
       {
         headers: {
           "Content-Type": "application/json",
-          // 如果需要认证，添加 Authorization header
-          // 'Authorization': `Bearer ${getToken()}`
         },
         withCredentials: true, // 添加这一行来显式携带 cookie
       }
     );
 
-    console.log("History Response Data:", response.data);
+    const data: BrowseMessagesResponse = response.data;
+    console.log("History Response Data:", data);
 
     // 检查后端返回的业务错误
     if (response.data.error !== 0) {
-      throw new Error(`API error code: ${response.data.error}`);
+      throw new Error(`API error code: ${data.error}`);
     }
 
     // 处理返回的消息，转换为组件需要的格式
-    if (response.data.messages && Array.isArray(response.data.messages)) {
-      const formattedMessages: FormattedMessage = response.data.messages.map(
+    if (data.messages) {
+      const formattedMessages: FormattedMessage[] = data.messages.map(
         (backendMsg: MessageItem) => {
-          // 根据返回数据判断是否为机器人消息
-          // 通常 role 为 "assistant" 或 sender 不为 "user" 时为机器人消息
-          const isBot =
-            backendMsg.prompt?.role === "assistant" ||
-            backendMsg.sender === "assistant" ||
-            backendMsg.sender !== "user";
+          const isBot = backendMsg.sender === "assistant";
 
           // 获取消息内容
           let messageContent = "";
@@ -545,21 +534,17 @@ const loadConversationHistory = async () => {
 
           // 处理 prompt 中的内容
           if (backendMsg.prompt) {
-            if (typeof backendMsg.prompt === "object") {
-              // 处理对象形式的 prompt
-              if (backendMsg.prompt.content) {
-                messageContent = backendMsg.prompt.content;
-              }
-              // 未来可能会有图片处理逻辑
-              // if (backendMsg.prompt.image_url) {...}
-            } else if (Array.isArray(backendMsg.prompt)) {
+            if (Array.isArray(backendMsg.prompt)) {
               // 处理数组形式的 prompt (向后兼容)
-              for (const part of backendMsg.prompt) {
+              const prompt_array: PromptArrayItem[] =
+                backendMsg.prompt as PromptArrayItem[];
+              for (const part of prompt_array) {
                 if (part.type === "text" && part.content) {
                   messageContent = part.content;
-                } else if (part.content) {
-                  // 直接取content (适应不同结构)
-                  messageContent = part.content;
+                } else if (part.type === "image" && part.content) {
+                  // TODO: 这里处理图片，目前不考虑
+                  // messageContent = part.content;
+                  messageType = "image";
                 }
               }
             }
@@ -567,19 +552,19 @@ const loadConversationHistory = async () => {
 
           // 如果没有找到内容，使用备用值
           if (!messageContent) {
-            messageContent = "[无内容]";
+            messageContent = "服务器繁忙，请稍后重试";
           }
 
           // 创建前端消息对象
           return {
-            id: backendMsg.id || `history-${backendMsg.id || Date.now()}`,
+            id: backendMsg.id,
+            sender: backendMsg.sender, // sender 和 message_type 在 message 是数组时不一样，都要
             is_bot: isBot,
             message: messageContent,
             message_type: messageType,
             model_id: backendMsg.model_id,
             model_class: backendMsg.model_class,
-            timestamp: backendMsg.timestamp || new Date().toISOString(),
-          };
+          } as FormattedMessage;
         }
       );
 
