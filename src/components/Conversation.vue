@@ -163,15 +163,6 @@ const setupWebSocket = (sessionId: number) => {
   // 创建新的WebSocket连接
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
-  // FIXME: encodeURIComponent 由 AI 生成，可能不需要
-  // const wsUrl = `${protocol}//${
-  //   window.location.host
-  // }/api/v1/ws/tran_ans/?uuid=${encodeURIComponent(
-  //   stateStore.user?.id
-  // )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-  //   currentModel.value.model_id || "claude-3-haiku"
-  // )}`;
-  // FIXME: 测试用 ws URL  这里都是硬编码
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
@@ -188,7 +179,7 @@ const setupWebSocket = (sessionId: number) => {
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
 
   // 定义标记常量
-  const START_MARKER = "Contents:";
+  const START_MARKER = "&^%$#@!()&";
   const END_MARKER = "&&&&&&******^^^^^^";
 
   // WebSocket事件处理
@@ -206,6 +197,18 @@ const setupWebSocket = (sessionId: number) => {
     ) {
       props.conversation.messages.push({ id: null, is_bot: true, message: "" });
     }
+
+    // Add a hard timeout as a safety mechanism in case messages never complete
+    const hardTimeout = setTimeout(() => {
+      if (fetchingResponse.value) {
+        console.warn("Hard timeout reached - forcing connection closed");
+        abortFetch(1001, "Response never completed");
+        showSnackbar("总响应超时，已强制结束连接");
+      }
+    }, 60000); // 60 seconds hard timeout
+
+    // Clean up this timeout if websocket closes
+    ws.value?.addEventListener("close", () => clearTimeout(hardTimeout));
   };
 
   ws.value.onmessage = (event) => {
@@ -258,8 +261,8 @@ const setupWebSocket = (sessionId: number) => {
 // 修改终止函数，同时处理HTTP请求和WebSocket
 let ctrl: any;
 const abortFetch = (
-  closeCode: number = 1001,
-  closeReason: string = "User aborted"
+  closeCode: number = 1000,
+  closeReason: string = "User manually cancelled"
 ) => {
   clearWebsocketTimeout(); // Clear timer when aborting
 
@@ -283,6 +286,12 @@ const abortFetch = (
 const fetchReply = async (message: any) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
+
+  // Add a timeout for the fetch request
+  const fetchTimeout = setTimeout(() => {
+    abortFetch(1001, "HTTP request timeout");
+    showSnackbar("请求超时，请检查网络连接");
+  }, import.meta.env.SEND_TIMEOUT);
 
   let msg = message;
   if (Array.isArray(message)) {
@@ -364,6 +373,9 @@ const fetchReply = async (message: any) => {
       throw new Error(`API error: ${responseData.error}`);
     }
 
+    // Clear the timeout on successful response
+    clearTimeout(fetchTimeout);
+
     // 准备接收消息 - 建立WebSocket连接
     setupWebSocket(responseData.session_id || props.conversation.id);
 
@@ -412,7 +424,15 @@ const send = (message: any) => {
   scrollChatWindow();
 };
 const stop = () => {
-  abortFetch();
+  fetchingResponse.value = false;
+  abortFetch(1000, "User manually canceled");
+
+  while (messageQueue.length > 0) {
+    messageQueue.shift();
+  }
+  isProcessingQueue = false;
+
+  showSnackbar("回答已取消");
 };
 // 提示条
 const snackbar = ref(false);

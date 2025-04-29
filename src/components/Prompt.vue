@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthFetch } from "@/composables/fetch";
 import { onMounted, ref } from "vue";
+import { useStateStore } from "@/stores/states";
 
 const menu = ref(false);
 const prompts = ref<Array<any>>([]);
@@ -83,10 +84,11 @@ const deletePrompt = async (index: number) => {
 
 const loadPrompts = async () => {
   loadingPrompts.value = true;
-  const { data, error } = await useAuthFetch("/api/chat/prompts/");
-  if (!error.value) {
-    prompts.value = data.value as Array<any>;
-  }
+  // const { data, error } = await useAuthFetch("/api/chat/prompts/");
+  // if (!error.value) {
+  //   prompts.value = data.value as Array<any>;
+  // }
+
   loadingPrompts.value = false;
 };
 
