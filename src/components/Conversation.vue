@@ -6,7 +6,6 @@ import { storeToRefs } from "pinia";
 import { addConversation } from "@/utils/helper";
 import ModelSelector from "./ModelSelector.vue"; // TODO: 稍后创建这个组件
 import type {
-  PromptMessage,
   ChatParameters,
   ChatRequestData,
   BrowseMessagesResponse,
@@ -284,7 +283,7 @@ const abortFetch = (
 };
 
 // 发送对话，获取请求
-const fetchReply = async (message: any) => {
+const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
@@ -294,45 +293,27 @@ const fetchReply = async (message: any) => {
     showSnackbar("请求超时，请检查网络连接");
   }, import.meta.env.SEND_TIMEOUT);
 
-  let msg = message;
-  if (Array.isArray(message)) {
-    msg = message[message.length - 1];
-  } else {
+  if (!Array.isArray(message)) {
     message = [message];
   }
   // 格式化用户消息为接口需要的格式
-  const formattedPrompt: PromptMessage[] = message.map((m: any) => ({
-    role: m.message_type === "image" ? "image" : "user",
-    content: m.content,
-  }));
-  // TODO: 对于新页面和首次对话（创建新会话），传给后端的请求有所不同。不知道这里解决没有
-  // 构建请求参数
-  // const requestData: ChatRequestData = {
-  //   uuid: stateStore.user?.id, // 用户ID
-  //   session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
-  //   model_id: currentModel.value.model_id || "claude-3-haiku", // 模型ID
-  //   model_class: currentModel.value.model_class || "anthropic", // 模型大类
-  //   prompt: formattedPrompt,
-  //   parameters: {
-  //     temperature: 0.7,
-  //     frugalMode: frugalMode.value,
-  //     // 如果启用了网页搜索
-  //     ...(enableWebSearch.value && {
-  //       online: true,
-  //       ua: navigator.userAgent,
-  //     }),
-  //   } as ChatParameters,
-  // };
+  const formattedPrompt: PromptArrayItem[] = message.map(
+    (m: PromptArrayItem) => ({
+      type: m.type === "image" ? "image" : "text", // TODO: 反正现在type不会是image，所以默认是text
+      content: m.content,
+    })
+  );
+  // TODO: 现在先写死，之后配合登录后存入 stateStore，以及 getChatServer 接口获取信息）即使这样，也要存到 stateStore 中）
   const requestData: ChatRequestData = {
-    uuid: 1, // 用户ID
-    session_id: null, // 会话ID，如果是新对话则为null
+    uuid: 1 || stateStore.user.id, // 用户ID
+    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
     model_id: 1, // 模型ID
-    model_class: "anthropic", // 模型大类
+    model_class: "anthropic", // 模型大类，现在没用
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
       frugalMode: frugalMode.value,
-      // 如果启用了网页搜索
+      reasonable: false,
       ...(enableWebSearch.value && {
         online: true,
         ua: navigator.userAgent,
@@ -497,7 +478,7 @@ const loadConversationHistory = async () => {
 
     // TODO: uuid 这里要用正常逻辑，不能硬编码
     const requestData = {
-      uuid: 1 || stateStore.user,
+      uuid: 1 || stateStore.user.id,
       session_id: props.conversation.id,
     };
 
@@ -552,7 +533,7 @@ const loadConversationHistory = async () => {
 
           // 如果没有找到内容，使用备用值
           if (!messageContent) {
-            messageContent = "服务器繁忙，请稍后重试";
+            messageContent = "Qwen3 是世界上最好的模型";
           }
 
           // 创建前端消息对象

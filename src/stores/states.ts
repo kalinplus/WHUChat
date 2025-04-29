@@ -6,7 +6,7 @@ export const useStateStore = defineStore("stateStore", {
     currentModel: getCurrentModel() as any, // 替代 useCurrentModel
     apiKey: getStoredApiKey(), // 替代 useApiKey
     conversations: [] as any[], // 替代 useConversations，conversations指会话
-    user: null as any, // 替代 useUser
+    user: null as any, // TODO: 应该至少要有 id 和 name 属性
     drawer: false, // 替代 useDrawer
   }),
   actions: {
