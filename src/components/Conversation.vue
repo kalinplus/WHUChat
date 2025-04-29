@@ -520,7 +520,9 @@ const loadConversationHistory = async () => {
               const prompt_array: PromptArrayItem[] =
                 backendMsg.prompt as PromptArrayItem[];
               for (const part of prompt_array) {
-                if (part.type === "text" && part.content) {
+                // if (part.type === "text" && part.content) {
+                if (part.content) {
+                  // TODO: 暂时用这个逻辑，后面需要添加检测 type，等后端的返回值更改
                   messageContent = part.content;
                 } else if (part.type === "image" && part.content) {
                   // TODO: 这里处理图片，目前不考虑
