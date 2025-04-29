@@ -19,7 +19,7 @@ interface FetchReturn<T> {
 
 // 基础 Fetch 封装 (可选，如果非认证请求也需要统一处理 baseURL)
 export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
-  const baseUrl = "https://127.0.0.1:8081";;
+  const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
   const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
 
   const defaultOptions: any = {
@@ -42,8 +42,7 @@ export const useMyFetch = <T>(url: string, options?: any): FetchReturn<T> => {
 // 认证请求封装 (主要修改在这里)
 // TODO: 检查这个函数，好像有问题
 export const useAuthFetch = <T>(url: string, options?: any): FetchReturn<T> => {
-  const protocol = import.meta.env.VITE_API_PROTOCOL || "https";
-  const baseUrl = `${protocol}//import.meta.env.VITE_API_HOST` || "https://127.0.0.1:8081";
+  const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
   const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
 
   const defaultOptions: any = {
