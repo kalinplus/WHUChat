@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // 从环境变量获取配置（需在 .env 文件中配置）
-const baseURL = import.meta.env.VITE_SERVER_DOMAIN || "";
+const baseURL = "http://localhost:8080";
 const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 10000;
 
 // 创建 axios 实例
@@ -43,7 +43,6 @@ instance.interceptors.response.use(
         default:
           console.error("Unknown Error");
       }
-      return null;
     } else if (error.request) {
       // 请求已发出但没有收到响应
       console.error("No response received");
@@ -51,7 +50,7 @@ instance.interceptors.response.use(
       // 请求配置错误
       console.error("Request setup error");
     }
-    return Promise.reject(error);
+    return null;
   }
 );
 

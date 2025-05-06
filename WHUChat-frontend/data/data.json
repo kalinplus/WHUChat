@@ -1,0 +1,12 @@
+{
+    "login":{
+        "uuid":10,
+        "error":0
+    },
+    "register":{
+        "uuid":11
+    },
+    "vrfcode":{
+        "uuid":12
+    }
+}
