@@ -287,11 +287,13 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
+  // console.log(Number(import.meta.env.VITE_SEND_TIMEOUT))
+
   // Add a timeout for the fetch request
   const fetchTimeout = setTimeout(() => {
     abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
-  }, import.meta.env.SEND_TIMEOUT);
+  }, Number(import.meta.env.VITE_SEND_TIMEOUT));
 
   if (!Array.isArray(message)) {
     message = [message];
@@ -525,7 +527,7 @@ const loadConversationHistory = async () => {
                   // TODO: 暂时用这个逻辑，后面需要添加检测 type，等后端的返回值更改
                   messageContent = part.content;
                 } else if (part.type === "image" && part.content) {
-                  // TODO: 这里处理图片，目前不考虑
+                  // TODO: 如果是图片，可能需要特殊处理，但当前不考虑
                   // messageContent = part.content;
                   messageType = "image";
                 }
@@ -584,20 +586,27 @@ const loadConversationHistory = async () => {
 watch(
   () => props.conversation.id,
   (newId, oldId) => {
-    console.log(`Conversation ID changed: ${oldId} -> ${newId}`);
+    console.log(`Conversation ID changed (watch): ${oldId} -> ${newId}`);
 
-    // 如果新ID有效且与旧ID不同，则加载历史
-    if (newId && newId !== oldId && oldId !== null) {
-      loadConversationHistory();
-    }
-    // 如果新ID为null（创建新对话）
-    else if (newId === null) {
-      props.conversation.messages = [];
-      props.conversation.loadingMessages = false;
-    }
-    // 如果首次加载时已有ID（处理直接通过URL访问的情况）
-    else if (newId && oldId === undefined) {
-      loadConversationHistory();
+    if (newId !== null && newId !== undefined) {
+      // 条件1: ID 确实发生了变化 (newId !== oldId)
+      // 条件2: 或者 oldId 是 undefined (表示组件首次加载或页面刷新时，newId 已有值)
+      //        并且当前没有消息 (避免在某些情况下重复加载)
+      if (
+        newId !== oldId ||
+        (oldId === undefined &&
+          (!props.conversation.messages ||
+            props.conversation.messages.length === 0))
+      ) {
+        loadConversationHistory();
+      }
+    } else if (newId === null) {
+      // newId 是 null，表示切换到新对话
+      if (props.conversation) {
+        // 确保 props.conversation 存在
+        props.conversation.messages = [];
+        props.conversation.loadingMessages = false;
+      }
     }
   },
   { immediate: true }
