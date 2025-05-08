@@ -19,7 +19,6 @@ import axios from "axios";
 const { t } = useI18n();
 const stateStore = useStateStore();
 const { currentModel } = storeToRefs(stateStore);
-const fetchingResponse = ref(false);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
 const frugalMode = ref(false);
@@ -126,7 +125,7 @@ const resetWebsocketTimeout = () => {
   clearWebsocketTimeout(); // Clear any existing timer
 
   // Only set a new timer if the connection is supposed to be active
-  if (fetchingResponse.value && wsConnected.value) {
+  if (stateStore.fetchingResponse && wsConnected.value) {
     websocketTimeoutId = setTimeout(() => {
       console.warn("WebSocket timeout reached.");
       showSnackbar("服务器连接超时"); // Show snackbar first
@@ -200,7 +199,7 @@ const setupWebSocket = (sessionId: number) => {
 
     // Add a hard timeout as a safety mechanism in case messages never complete
     const hardTimeout = setTimeout(() => {
-      if (fetchingResponse.value) {
+      if (stateStore.fetchingResponse) {
         console.warn("Hard timeout reached - forcing connection closed");
         abortFetch(1001, "Response never completed");
         showSnackbar("总响应超时，已强制结束连接");
@@ -232,7 +231,7 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onerror = (error) => {
-    fetchingResponse.value = false;
+    stateStore.fetchingResponse = false;
     clearWebsocketTimeout(); // Clear timer on error
     console.error("WebSocket error:", error);
     wsConnected.value = false;
@@ -241,7 +240,7 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onclose = (event) => {
-    fetchingResponse.value = false;
+    stateStore.fetchingResponse = false;
     clearWebsocketTimeout(); // Clear timer on close
     wsConnected.value = false;
     console.log(
@@ -271,7 +270,7 @@ const abortFetch = (
   if (fetchTimeout) {
     clearTimeout(fetchTimeout);
     fetchTimeout = null;
-    fetchingResponse.value = false;
+    stateStore.fetchingResponse = false;
   }
 
   if (ctrl) {
@@ -339,7 +338,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 
   try {
-    fetchingResponse.value = true;
+    stateStore.fetchingResponse = true;
 
     // 发送HTTP POST请求
     // FIXME: 测试用 URL
@@ -377,7 +376,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       props.conversation.id = responseData.session_id;
     }
   } catch (err: any) {
-    fetchingResponse.value = false;
+    stateStore.fetchingResponse = false;
     console.error(err);
     abortFetch();
     showSnackbar(err.message);
@@ -397,7 +396,7 @@ const scrollChatWindow = () => {
 };
 // 发送prompt, message 对应 MsgEditor 中 send 方法发送的
 const send = (message: any) => {
-  fetchingResponse.value = true;
+  stateStore.fetchingResponse = true;
   if (props.conversation.messages.length === 0) {
     addConversation(props.conversation);
   }
@@ -418,7 +417,7 @@ const send = (message: any) => {
   scrollChatWindow();
 };
 const stop = () => {
-  fetchingResponse.value = false;
+  stateStore.fetchingResponse = false;
   abortFetch(1000, "User manually canceled");
 
   while (messageQueue.length > 0) {
@@ -688,7 +687,7 @@ const hasMessages = computed(
           <!-- 上部分：消息编辑区和停止按钮 -->
           <div class="d-flex align-center">
             <v-btn
-              v-show="fetchingResponse"
+              v-show="stateStore.fetchingResponse"
               @click="stop"
               class="mr-3"
               color="error"
@@ -699,8 +698,8 @@ const hasMessages = computed(
             <MsgEditor
               ref="editor"
               :send-message="send"
-              :disabled="fetchingResponse"
-              :loading="fetchingResponse"
+              :disabled="stateStore.fetchingResponse"
+              :loading="stateStore.fetchingResponse"
             />
           </div>
 
@@ -708,7 +707,7 @@ const hasMessages = computed(
           <div class="d-flex align-center flex-wrap mt-2">
             <!-- 原有按钮不变... -->
             <Prompt
-              v-show="!fetchingResponse"
+              v-show="!stateStore.fetchingResponse"
               :use-prompt="usePrompt"
               class="mr-2"
             />

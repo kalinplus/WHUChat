@@ -130,5 +130,6 @@
   "loadingHistoryMessages": "加载历史消息......",
   "lightMode": "浅色模式",
   "darkMode": "深色模式",
-  "followSystem": "跟随系统"
+  "followSystem": "跟随系统",
+  "waitForResponseOrStop": "在新建会话前，请等待当前回答完成，或手动终止回答"
 }

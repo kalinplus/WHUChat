@@ -17,9 +17,11 @@ import UserFooter from "./UserFooter.vue";
 import type { ConversationInfo, ConversationsResponse } from "@/types/types";
 import { logout, getToken } from "@/utils/auth";
 import axios from "axios";
+import { storeToRefs } from "pinia";
 
 const emit = defineEmits(["openSettings", "signOut"]);
 const stateStore = useStateStore();
+const { drawer } = storeToRefs(stateStore);
 
 const { t } = useI18n();
 
@@ -128,16 +130,6 @@ const deleteConversation = async (index: number) => {
     }
   }
 };
-/**
- * 创建新会话
- */
-const createNewConversation = () => {
-  if (route.path !== "/") {
-    return router.push("/");
-  }
-  // 如果已经在主页面，只关闭抽屉
-  drawer.value = false;
-};
 
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -145,6 +137,25 @@ const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
 };
+/**
+ * 创建新会话
+ */
+const createNewConversation = () => {
+  // 判断当前是否在回答中
+  if (stateStore.fetchingResponse) {
+    // 提示用户等待或手动终止
+    showSnackbar(t("waitForResponseOrStop"));
+    return;
+  }
+
+  // 如果不在回答中，则正常创建新会话
+  if (route.path !== "/") {
+    router.push("/");
+  }
+  // 如果已经在主页面，只关闭抽屉
+  drawer.value = false;
+};
+
 /**
  *  获取指定会话的对话数据，只供 exportConversation 函数使用，用于导出会话数据
  * @param conversation_id 会话id
@@ -315,8 +326,6 @@ const signOut = async () => {
 onMounted(async () => {
   loadConversations();
 });
-
-const drawer = useDrawer();
 
 // TODO: 陈致远做设置界面
 const currentThemeName = computed(() => {

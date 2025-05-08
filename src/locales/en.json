@@ -123,5 +123,6 @@
   "loadingHistoryMessages": "Loading History Messages......",
   "lightMode": "Light Mode",
   "darkMode": "Dark Mode",
-  "followSystem": "Follow System"
+  "followSystem": "Follow System",
+  "waitForResponseOrStop": "Please wait for the response endding or abort it manually before create new session."
 }

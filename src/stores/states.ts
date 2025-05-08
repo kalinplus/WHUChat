@@ -8,6 +8,7 @@ export const useStateStore = defineStore("stateStore", {
     conversations: [] as any[], // 替代 useConversations，conversations指会话
     user: null as any, // TODO: 应该至少要有 id 和 name 属性
     drawer: false, // 替代 useDrawer
+    fetchingResponse: false,
   }),
   actions: {
     setCurrentModel(model: any) {
@@ -32,6 +33,9 @@ export const useStateStore = defineStore("stateStore", {
     toggleDrawer() {
       // console.log(this.drawer)
       this.drawer = !this.drawer;
+    },
+    toggleFetchingResponse() {
+      this.fetchingResponse = !this.fetchingResponse;
     },
     setConversations(conversations: any[]) {
       this.conversations = conversations;
