@@ -112,7 +112,7 @@ const processMessageQueue = () => {
 };
 
 // 超时熔断机制
-const WEBSOCKET_TIMEOUT_DURATION = 20000; // 20 seconds in milliseconds
+const WEBSOCKET_TIMEOUT_DURATION = 60000; // 60 seconds in milliseconds
 let websocketTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearWebsocketTimeout = () => {
@@ -179,8 +179,8 @@ const setupWebSocket = (sessionId: number) => {
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
 
   // 定义标记常量
-  const START_MARKER = "&^%$#@!()&";
-  const END_MARKER = "&&&&&&******^^^^^^";
+  const START_MARKER = "\u001C\u001C\u001C";
+  const END_MARKER = "\u001C\u200C\u001C";
 
   // WebSocket事件处理
   ws.value.onopen = () => {
@@ -260,21 +260,26 @@ const setupWebSocket = (sessionId: number) => {
 
 // 修改终止函数，同时处理HTTP请求和WebSocket
 let ctrl: any;
+let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
 ) => {
-  clearWebsocketTimeout(); // Clear timer when aborting
+  clearWebsocketTimeout();
+  if (fetchTimeout) {
+    clearTimeout(fetchTimeout);
+    fetchTimeout = null;
+  }
 
   if (ctrl) {
-    ctrl.abort();
+    try {
+      ctrl.abort();
+    } catch (e) {}
     ctrl = null;
   }
 
-  if (ws.value && wsConnected.value) {
-    console.log(
-      `abortFetch explicitly closing WebSocket with code ${closeCode}.`
-    );
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     ws.value.close(closeCode, closeReason);
     wsConnected.value = false;
   }
@@ -305,6 +310,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       content: m.content,
     })
   );
+
   // TODO: 现在先写死，之后配合登录后存入 stateStore，以及 getChatServer 接口获取信息）即使这样，也要存到 stateStore 中）
   const requestData: ChatRequestData = {
     uuid: 1 || stateStore.user.id, // 用户ID
@@ -367,6 +373,8 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
     }
+    // 回答结束
+    fetchingResponse.value = false;
   } catch (err: any) {
     console.error(err);
     abortFetch();
