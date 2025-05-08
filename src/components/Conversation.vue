@@ -307,7 +307,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   const formattedPrompt: PromptArrayItem[] = message.map(
     (m: PromptArrayItem) => ({
       type: m.type === "image" ? "image" : "text", // TODO: 反正现在type不会是image，所以默认是text
-      content: m.content,
+      text: m.text,
     })
   );
 
@@ -328,6 +328,9 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       }),
     } as ChatParameters,
   };
+
+  console.log(requestData);
+
   // 如果用户提供了自定义API URL和Key，则添加到请求中，没有就算了
   // 只有一个没用，所以一定一起添加。虽然一起也不知道有没有用，实现了吗
   if (currentModel.value.custom_url && currentModel.value.api_key) {
@@ -374,6 +377,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       props.conversation.id = responseData.session_id;
     }
   } catch (err: any) {
+    fetchingResponse.value = false;
     console.error(err);
     abortFetch();
     showSnackbar(err.message);
@@ -518,7 +522,7 @@ const loadConversationHistory = async () => {
           const isBot = backendMsg.sender === "assistant";
 
           // 获取消息内容
-          let messageContent = "";
+          let messageContent;
           let messageType = "text"; // 默认为文本
 
           // 处理 prompt 中的内容
@@ -528,14 +532,10 @@ const loadConversationHistory = async () => {
               const prompt_array: PromptArrayItem[] =
                 backendMsg.prompt as PromptArrayItem[];
               for (const part of prompt_array) {
-                // if (part.type === "text" && part.content) {
-                if (part.content) {
+                if (part.text) {
                   // TODO: 暂时用这个逻辑，后面需要添加检测 type，等后端的返回值更改
-                  messageContent = part.content;
-                } else if (part.type === "image" && part.content) {
-                  // TODO: 如果是图片，可能需要特殊处理，但当前不考虑
-                  // messageContent = part.content;
-                  messageType = "image";
+                  // FIXME: 现在（和以后）只考虑文本
+                  messageContent = part.text;
                 }
               }
             }

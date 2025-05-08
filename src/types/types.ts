@@ -49,7 +49,7 @@ export interface ConversationsResponse {
  */
 export interface PromptArrayItem {
   type: "text" | "image" | string;
-  content: string | { url: string } | any;
+  text: string | { url: string } | any;
 }
 
 /**
