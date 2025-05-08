@@ -232,6 +232,7 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onerror = (error) => {
+    fetchingResponse.value = false;
     clearWebsocketTimeout(); // Clear timer on error
     console.error("WebSocket error:", error);
     wsConnected.value = false;
@@ -240,6 +241,7 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onclose = (event) => {
+    fetchingResponse.value = false;
     clearWebsocketTimeout(); // Clear timer on close
     wsConnected.value = false;
     console.log(
@@ -254,7 +256,6 @@ const setupWebSocket = (sessionId: number) => {
         );
       }
     }
-    fetchingResponse.value = false;
   };
 };
 
@@ -270,6 +271,7 @@ const abortFetch = (
   if (fetchTimeout) {
     clearTimeout(fetchTimeout);
     fetchTimeout = null;
+    fetchingResponse.value = false;
   }
 
   if (ctrl) {
@@ -283,8 +285,6 @@ const abortFetch = (
     ws.value.close(closeCode, closeReason);
     wsConnected.value = false;
   }
-
-  fetchingResponse.value = false;
 };
 
 // 发送对话，获取请求
@@ -373,8 +373,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
     }
-    // 回答结束
-    fetchingResponse.value = false;
   } catch (err: any) {
     console.error(err);
     abortFetch();
