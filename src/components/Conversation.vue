@@ -395,7 +395,7 @@ const scrollChatWindow = () => {
     parent.scrollTop = parent.scrollHeight - parent.clientHeight - 64;
   }
 };
-// 发送prompt
+// 发送prompt, message 对应 MsgEditor 中 send 方法发送的
 const send = (message: any) => {
   fetchingResponse.value = true;
   if (props.conversation.messages.length === 0) {
@@ -410,8 +410,8 @@ const send = (message: any) => {
     );
   } else {
     props.conversation.messages.push({
-      message: message.content,
-      message_type: message.message_type,
+      message: message.text,
+      message_type: message.type,
     });
   }
   fetchReply(message);

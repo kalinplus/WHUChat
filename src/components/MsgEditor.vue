@@ -50,8 +50,8 @@ const send = () => {
   if (msg.length > 0) {
     let item = toolSelector.value.list[toolSelector.value.selected];
     props.sendMessage({
-      type: item.type,
-      content: msg,
+      type: "text",  // item.type
+      text: msg,
       tool: item.name,  // TODO：这啥？要用吗
     });
   }
