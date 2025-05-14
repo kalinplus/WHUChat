@@ -47,6 +47,7 @@ const showModelSelector = ref(false);
 
 const typewriter = import.meta.env.VITE_TYPEWRITER === "true";
 const typewriterDelay = import.meta.env.VITE_TYPEWRITERDELAY as number;
+let typewriterIntervalId: ReturnType<typeof setInterval> | null = null;
 
 const processMessageQueue = () => {
   // 如果正在处理队列或队列为空，直接返回
@@ -81,7 +82,8 @@ const processMessageQueue = () => {
   // 打字机效果
   if (typewriter && messageText.length > 0) {
     let wordIndex = 0;
-    const intervalId = setInterval(() => {
+    if (typewriterIntervalId) clearInterval(typewriterIntervalId);
+    typewriterIntervalId = setInterval(() => {
       // 确保索引在有效范围内
       if (
         wordIndex < messageText.length &&
@@ -93,7 +95,10 @@ const processMessageQueue = () => {
         wordIndex++;
       } else {
         // 如果索引超出范围或消息数组为空，清除定时器
-        clearInterval(intervalId);
+        if (typewriterIntervalId !== null) {
+          clearInterval(typewriterIntervalId);
+        }
+        typewriterIntervalId = null;
         isProcessingQueue = false;
         processMessageQueue(); // 处理下一条消息
       }
@@ -108,6 +113,15 @@ const processMessageQueue = () => {
     isProcessingQueue = false;
     processMessageQueue();
   }
+};
+
+const clearTypewriter = () => {
+  if (typewriterIntervalId) {
+    clearInterval(typewriterIntervalId);
+    typewriterIntervalId = null;
+    console.log("Typewriter interval cleared.");
+  }
+  isProcessingQueue = false; // 确保处理队列也停止
 };
 
 // 超时熔断机制
@@ -220,6 +234,7 @@ const setupWebSocket = (sessionId: number) => {
     if (messageData === START_MARKER) {
       console.log("Received start marker.");
     } else if (messageData === END_MARKER) {
+      stateStore.fetchingResponse = false;
       console.log("Received end marker.");
       // Close normally, abortFetch will clear the timer
       abortFetch(1000, "Client received end marker");
@@ -231,15 +246,25 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onerror = (error) => {
-    stateStore.fetchingResponse = false;
+    console.error("WebSocket onerror event:", error);
+    clearTypewriter(); // 确保打字机也在这里被清理
+    if (stateStore.fetchingResponse) {
+      // 再次确认
+      stateStore.fetchingResponse = false;
+      console.log("fetchingResponse set to false by ws.onerror");
+    }
     clearWebsocketTimeout(); // Clear timer on error
     console.error("WebSocket error:", error);
     wsConnected.value = false;
     showSnackbar("WebSocket connection error");
-    abortFetch(1006, "WebSocket error occurred");
+    // abortFetch(1006, "WebSocket error occurred");
   };
 
   ws.value.onclose = (event) => {
+    console.log(
+      `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
+    );
+    clearTypewriter();
     stateStore.fetchingResponse = false;
     clearWebsocketTimeout(); // Clear timer on close
     wsConnected.value = false;
@@ -266,23 +291,40 @@ const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
 ) => {
+  clearTypewriter();
+  console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`); // 增加日志
+
+  // 立即尝试重置加载状态
+  if (stateStore.fetchingResponse) {
+    stateStore.fetchingResponse = false;
+    console.log("fetchingResponse set to false by abortFetch");
+  }
   clearWebsocketTimeout();
   if (fetchTimeout) {
     clearTimeout(fetchTimeout);
     fetchTimeout = null;
-    stateStore.fetchingResponse = false;
+    console.log("HTTP fetchTimeout cleared by abortFetch");
   }
 
   if (ctrl) {
     try {
       ctrl.abort();
-    } catch (e) {}
+      console.log("HTTP AbortController aborted by abortFetch");
+    } catch (e) {
+      console.error("Error aborting HTTP controller:", e);
+    }
     ctrl = null;
   }
 
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    console.log(
+      `Closing WebSocket with code: ${closeCode}, reason: ${closeReason}`
+    );
     ws.value.close(closeCode, closeReason);
-    wsConnected.value = false;
+  } else if (ws.value) {
+    console.log(`WebSocket not open, current state: ${ws.value.readyState}`);
+  } else {
+    console.log("WebSocket instance is null in abortFetch");
   }
 };
 
@@ -417,6 +459,7 @@ const send = (message: any) => {
   scrollChatWindow();
 };
 const stop = () => {
+  clearTypewriter();
   stateStore.fetchingResponse = false;
   abortFetch(1000, "User manually canceled");
 
