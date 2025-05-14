@@ -82,28 +82,72 @@ const deletingConversationIndex = ref();
 const editConversation = (index: number) => {
   editingConversation.value = conversations.value[index];
 };
+// ...existing code...
 /**
  *  保存已编辑的对话标题到服务器并更新本地数据
- * @param index 会话id
+ * @param index 会话在 conversations 数组中的索引
  */
 const updateConversation = async (index: number) => {
-  editingConversation.value.updating = true;
-  const { data, error } = await useAuthFetch(
-    `/api/chat/conversations/${editingConversation.value.id}/`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        topic: editingConversation.value.topic,
-      }),
-    }
-  );
-  if (!error.value) {
-    editingConversation.value.updating = false;
-    conversations.value[index] = editingConversation.value;
+  // editingConversation.value 是 conversations.value[index] 的引用
+  // editingConversation.value.topic 已经通过 v-model 更新为输入框中的新标题
+  if (!editingConversation.value || typeof editingConversation.value.id === 'undefined') {
+    console.error("要编辑的会话或其ID未定义。");
+    editingConversation.value = null; // 退出编辑模式
+    return;
   }
-  conversations.value[index].updating = false;
-  editingConversation.value = false;
+
+  // 标记为正在更新，:loading 状态会显示
+  editingConversation.value.updating = true;
+
+  const newTitle = editingConversation.value.topic; // 从编辑对象中获取新标题
+  const sessionId = editingConversation.value.id;
+  const userId = stateStore.user?.id || 1; // 从 stateStore 获取用户ID，如果未登录则默认为1
+
+  try {
+    const { data, error } = await useAuthFetch(
+      `/api/v1/chat/update_title`, // 使用新的API端点
+      {
+        method: "POST", // 使用 POST 方法
+        body: JSON.stringify({
+          new_title: newTitle,
+          uuid: userId,
+          session_id: sessionId,
+        }),
+      }
+    );
+
+    if (!error.value) {
+      // API 调用成功
+      // 更新 conversations 数组中对应会话的 title 属性，以便UI正确显示
+      if (conversations.value[index]) {
+        conversations.value[index].title = newTitle;
+        // 如果 conversations.value[index].topic 也需要与 title 保持一致，可以取消下面一行的注释
+        // conversations.value[index].topic = newTitle;
+      }
+    } else {
+      // API 调用失败
+      console.error("通过API更新会话标题失败:", error.value);
+      showSnackbar(
+        t("titleUpdateError")
+      );
+    }
+  } catch (e: any) {
+    // 捕获 useAuthFetch 或其他代码可能抛出的异常
+    console.error("updateConversation API调用期间发生异常:", e);
+    showSnackbar(
+      t("titleUpdateError", `标题更新异常: ${e.message || '发生异常'}`)
+    );
+  } finally {
+    // 无论成功或失败，都重置更新状态并退出编辑模式
+    if (editingConversation.value) {
+      editingConversation.value.updating = false;
+    }
+    editingConversation.value = null; // 退出编辑模式，将编辑对象置空
+  }
 };
+/**
+ *  删除会话
+// ...existing code...
 /**
  *  删除会话
  * @param index 会话id

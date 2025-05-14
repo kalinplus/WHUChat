@@ -284,7 +284,7 @@ const setupWebSocket = (sessionId: number) => {
 };
 
 // 修改终止函数，同时处理HTTP请求和WebSocket
-let ctrl: any;
+let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const abortFetch = (
@@ -336,7 +336,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // console.log(Number(import.meta.env.VITE_SEND_TIMEOUT))
 
   // Add a timeout for the fetch request
-  const fetchTimeout = setTimeout(() => {
+  fetchTimeout = setTimeout(() => {
     abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
   }, Number(import.meta.env.VITE_SEND_TIMEOUT));
@@ -370,7 +370,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     } as ChatParameters,
   };
 
-  console.log(requestData);
+  console.log("Sending chat request:", requestData);
 
   // 如果用户提供了自定义API URL和Key，则添加到请求中，没有就算了
   // 只有一个没用，所以一定一起添加。虽然一起也不知道有没有用，实现了吗
@@ -416,6 +416,55 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     // 如果是新对话，更新对话ID
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
+      const newTitle =
+        formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat");
+      // Update title via API
+      try {
+        const updateTitleRequestData = {
+          new_title: newTitle,
+          uuid: 1 || stateStore.user.id, // TODO: Consistent with other UUID usage
+          session_id: responseData.session_id,
+        };
+
+        console.log("Updating title with data:", updateTitleRequestData);
+        // Assuming the new endpoint is also under /api/v1/
+        const updateTitleResponse = await fetch(
+          `${baseUrl}/api/v1/chat/update_title`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(updateTitleRequestData),
+          }
+        );
+
+        if (!updateTitleResponse.ok) {
+          const errorText = await updateTitleResponse.text();
+          console.error(
+            `Failed to update title: HTTP ${updateTitleResponse.status}. Response: ${errorText}`
+          );
+          // Optionally show a non-critical snackbar
+        } else {
+          const updateTitleResponseData = await updateTitleResponse.json();
+          if (updateTitleResponseData.error !== 0) {
+            console.error(
+              `Failed to update title: API error code ${updateTitleResponseData.error}, Message: ${updateTitleResponseData.message}`
+            );
+          } else {
+            console.log("Conversation title updated successfully via API.");
+            // Optionally update local conversation title if it's reactive and displayed
+            // This assumes your conversation object can have a 'title' property.
+            if (props.conversation && typeof props.conversation === "object") {
+              (props.conversation as any).title = newTitle; // Update local title for immediate UI feedback
+            }
+          }
+        }
+      } catch (titleError) {
+        console.error("Error sending update_title request:", titleError);
+        // Optionally show a non-critical snackbar
+      }
     }
   } catch (err: any) {
     stateStore.fetchingResponse = false;
