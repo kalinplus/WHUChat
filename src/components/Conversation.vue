@@ -634,7 +634,7 @@ const loadConversationHistory = async () => {
 
           // 如果没有找到内容，使用备用值
           if (!messageContent) {
-            messageContent = "Qwen3 是世界上最好的模型";
+            messageContent = "Gemini 2.5 Pro 是世界上最好的模型";
           }
 
           // 创建前端消息对象
