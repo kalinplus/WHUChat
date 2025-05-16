@@ -133,5 +133,6 @@
   "followSystem": "跟随系统",
   "waitForResponseOrStop": "在新建会话前，请等待当前回答完成，或手动终止回答",
   "new Chat": "新对话",
-  "titleUpdateError": "标题更新失败"
+  "titleUpdateError": "标题更新失败",
+  "emptyResponseFromServer": "服务器未返回有效内容"
 }

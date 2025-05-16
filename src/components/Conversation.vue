@@ -236,6 +236,56 @@ const setupWebSocket = (sessionId: number) => {
     } else if (messageData === END_MARKER) {
       stateStore.fetchingResponse = false;
       console.log("Received end marker.");
+
+      // 检查最后一条消息（应该是机器人的回复）是否为空
+      let isEmptyResponse = false;
+      if (props.conversation.messages.length > 0) {
+        const lastMessage =
+          props.conversation.messages[props.conversation.messages.length - 1];
+        // 确保是机器人消息且内容为空或仅包含空白字符
+        if (
+          lastMessage.is_bot &&
+          (!lastMessage.message || lastMessage.message.trim() === "")
+        ) {
+          isEmptyResponse = true;
+        }
+      } else {
+        // 如果消息列表为空，也视为空回复
+        isEmptyResponse = true;
+      }
+
+      if (isEmptyResponse) {
+        console.log(
+          "Bot response is empty upon END_MARKER. Setting default message."
+        );
+        // 获取或创建最后一条机器人消息以更新
+        let targetMessage;
+        if (
+          props.conversation.messages.length > 0 &&
+          props.conversation.messages[props.conversation.messages.length - 1]
+            .is_bot
+        ) {
+          targetMessage =
+            props.conversation.messages[props.conversation.messages.length - 1];
+        } else {
+          // 如果最后一条不是机器人消息或列表为空，则添加新的机器人消息
+          const newBotMessage = {
+            id: null,
+            is_bot: true,
+            message: "", // 初始为空，下面会设置默认消息
+            message_type: "text", // 假设默认为文本类型
+          };
+          props.conversation.messages.push(newBotMessage);
+          targetMessage = newBotMessage;
+        }
+        targetMessage.message = t("emptyResponseFromServer");
+
+        // 使用 nextTick 确保 UI 更新
+        nextTick(() => {
+          scrollChatWindow();
+        });
+      }
+
       // Close normally, abortFetch will clear the timer
       abortFetch(1000, "Client received end marker");
     } else {

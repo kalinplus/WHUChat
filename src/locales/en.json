@@ -126,5 +126,6 @@
   "followSystem": "Follow System",
   "waitForResponseOrStop": "Please wait for the response endding or abort it manually before create new session.",
   "new Chat": "New Chat",
-  "titleUpdateError": "Title Update Failed"
+  "titleUpdateError": "Title Update Failed",
+  "emptyResponseFromServer": "Empty Response From Server"
 }
