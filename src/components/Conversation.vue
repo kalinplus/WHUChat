@@ -22,6 +22,9 @@ const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
 const frugalMode = ref(false);
+// 定义标记常量
+const START_MARKER = "\u001C\u001C\u001C";
+const END_MARKER = "\u001C\u200C\u001C";
 
 interface Settings {
   enableWebSearch: boolean;
@@ -190,10 +193,6 @@ const setupWebSocket = (sessionId: number) => {
 
   // 确保携带cookie (WebSocket默认会带上同源的cookie)
   // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
-
-  // 定义标记常量
-  const START_MARKER = "\u001C\u001C\u001C";
-  const END_MARKER = "\u001C\u200C\u001C";
 
   // WebSocket事件处理
   ws.value.onopen = () => {
@@ -680,6 +679,13 @@ const loadConversationHistory = async () => {
                 }
               }
             }
+          }
+
+          // 清理 messageContent 中的 START_MARKER 和 END_MARKER
+          if (typeof messageContent === "string") {
+            messageContent = messageContent
+              .replace(new RegExp(START_MARKER, "g"), "")
+              .replace(new RegExp(END_MARKER, "g"), "");
           }
 
           // 如果没有找到内容，使用备用值
