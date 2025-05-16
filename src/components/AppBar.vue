@@ -20,7 +20,7 @@
         location="bottom"
         v-if="!stateStore.drawer"
       >
-        <template v-slot:activator="{ props }">
+        <!-- <template v-slot:activator="{ props }">
           <v-btn
             icon
             variant="text"
@@ -29,7 +29,7 @@
           >
             <v-icon>mdi-plus</v-icon>
           </v-btn>
-        </template>
+        </template> -->
       </v-tooltip>
 
       <div class="title">{{ title }}</div>

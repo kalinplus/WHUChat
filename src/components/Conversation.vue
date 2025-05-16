@@ -24,6 +24,7 @@ const messageQueue: { [key: string]: any } = [];
 const frugalMode = ref(false);
 // 定义标记常量
 const START_MARKER = "\u001C\u001C\u001C";
+// 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
 const END_MARKER = "\u001C\u200C\u001C";
 
 interface Settings {
@@ -405,6 +406,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   const requestData: ChatRequestData = {
     uuid: 1 || stateStore.user.id, // 用户ID
     session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
+    sender: 'user',
     model_id: 1, // 模型ID
     model_class: "anthropic", // 模型大类，现在没用
     prompt: formattedPrompt,
