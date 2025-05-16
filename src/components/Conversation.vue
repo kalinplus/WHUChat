@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
 import { addConversation } from "@/utils/helper";
@@ -26,6 +27,7 @@ const frugalMode = ref(false);
 const START_MARKER = "\u001C\u001C\u001C";
 // 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
 const END_MARKER = "\u001C\u200C\u001C";
+const router = useRouter();
 
 interface Settings {
   enableWebSearch: boolean;
@@ -406,7 +408,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   const requestData: ChatRequestData = {
     uuid: 1 || stateStore.user.id, // 用户ID
     session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
-    sender: 'user',
+    sender: "user",
     model_id: 1, // 模型ID
     prompt: formattedPrompt,
     parameters: {
@@ -466,6 +468,12 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     // 如果是新对话，更新对话ID
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
+
+      // 3. 在获取到新的 session_id 后，进行路由跳转
+      // 确保在 props.conversation.id 更新后执行
+      // 并且在 setupWebSocket 之后，以防 WebSocket 依赖于旧的 props.conversation.id (虽然这里它直接用 responseData.session_id)
+      router.push(`/${requestData.uuid}/${responseData.session_id}`);
+
       const newTitle =
         formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat");
       // Update title via API
