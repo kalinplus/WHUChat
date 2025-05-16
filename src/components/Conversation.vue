@@ -408,7 +408,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
     sender: 'user',
     model_id: 1, // 模型ID
-    model_class: "anthropic", // 模型大类，现在没用
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
