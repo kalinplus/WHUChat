@@ -113,10 +113,16 @@
   "settings": {
     "title": "Settings",
     "theme": "Theme",
-    "language": "Language",
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
-    "followSystem": "Follow system"
+    "followSystem": "Follow System",
+    "language": "Language",
+    "models": "Model Selection",
+    "api": "API Settings",
+    "apiKey": "API Key",
+    "chatSettings": "Chat Settings",
+    "enableWebSearch": "Enable Web Search",
+    "frugalMode": "Frugal Mode"
   },
   "selectModel": "Select Model",
   "close": "Close",

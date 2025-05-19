@@ -88,7 +88,7 @@ export function useModelManager() {
     }
   });
 
-  const updateModel = (model: Model) => {
+  const updateModel = (model) => {
     selectedModel.value = model;
   };
 

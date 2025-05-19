@@ -187,16 +187,6 @@ const availableModels = ref([
 const selectedModel = ref(stateStore.currentModel);
 const loadingModels = ref(false);
 
-// 定义模型类型
-interface Model {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  model_id: string;
-  model_class: string;
-}
-
 // API 相关状态
 const apiKey = ref(stateStore.apiKey || '');
 const showApiOptions = ref(true);
@@ -209,7 +199,7 @@ const frugalMode = ref(true);
 const fetchModels = async () => {
   loadingModels.value = true;
   try {
-    const { data, error } = await useAuthFetch<Model[]>('/api/v1/models', {
+    const { data, error } = await useAuthFetch('/api/v1/models', {
       method: 'GET',
       params: {
         uuid: stateStore.user?.id || 1
@@ -217,39 +207,27 @@ const fetchModels = async () => {
     });
     
     if (!error.value && data.value) {
-      if (Array.isArray(data.value)) {
-        // 确保每个模型对象都符合 Model 接口要求
-        const validatedModels: Model[] = data.value.map(model => ({
-          id: model.id || '',
-          name: model.name || 'Unknown Model',
-          description: model.description || '',
-          logo: model.logo || '/models/default.png',
-          model_id: model.model_id || model.id || '',
-          model_class: model.model_class || 'unknown'
-        }));
-        
-        availableModels.value = validatedModels;
-      } else {
-        console.error('Unexpected response format: models is not an array', data.value);
-      }
+      // 假设API返回的数据格式与availableModels相似
+      availableModels.value = data.value;
     } else {
       console.error('Failed to fetch models:', error.value);
-      // 在出错时保留现有模型列表，不清空
     }
   } catch (err) {
     console.error('Error fetching models:', err);
-    // 这里可以添加用户反馈，例如显示一个错误通知
   } finally {
     loadingModels.value = false;
   }
 };
 
-const updateModel = (model: Model) => {
+// 更新模型选择
+const updateModel = (model) => {
   stateStore.setCurrentModel(model);
 };
 
-const updateApiKey = (key: string) => {
+// 更新API密钥
+const updateApiKey = (key) => {
   stateStore.setApiKey(key);
+  // 存储到localStorage
   localStorage.setItem('apiKey', key);
 };
 

@@ -3,14 +3,6 @@ import { ref, watch } from "vue";
 import { useStateStore } from "./states";
 import { useI18n } from "vue-i18n";
 
-interface Model {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  model_id: string;
-  model_class: string;
-}
 
 export function useLanguageManager() {
   const { locale } = useI18n({ useScope: "global" });
@@ -59,17 +51,17 @@ export function useThemeManager() {
     window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   const selectedTheme = ref(theme.global.name.value);
-  const updateTheme = (val: string) => {
-    if (val === "system" || val === "light" || val === "dark") {
-      // 现在可以安全地使用 val
-      if (val === "system") {
-        theme.global.name.value = isSystemDarkTheme() ? "dark" : "light";
-      } else {
-        theme.global.name.value = val;
-      }
-      localStorage.setItem("themePreference", val);
+const updateTheme = (val: string) => {
+  if (val === "system" || val === "light" || val === "dark") {
+    // 现在可以安全地使用 val
+    if (val === "system") {
+      theme.global.name.value = isSystemDarkTheme() ? "dark" : "light";
+    } else {
+      theme.global.name.value = val;
     }
-  };
+    localStorage.setItem("themePreference", val);
+  }
+};
 
   return {
     selectedTheme,
@@ -88,7 +80,7 @@ export function useModelManager() {
     }
   });
 
-  const updateModel = (model: Model) => {
+  const updateModel = (model) => {
     selectedModel.value = model;
   };
 

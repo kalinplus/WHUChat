@@ -24,7 +24,6 @@ export interface ChatRequestData {
   api_key?: string | null; // 可选的自定义API密钥
 }
 
-// 模型接口
 export interface Model {
   id: string;
   name: string;

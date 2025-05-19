@@ -3,14 +3,6 @@ import { ref, watch } from "vue";
 import { useStateStore } from "./states";
 import { useI18n } from "vue-i18n";
 
-interface Model {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  model_id: string;
-  model_class: string;
-}
 
 export function useLanguageManager() {
   const { locale } = useI18n({ useScope: "global" });
@@ -88,7 +80,7 @@ export function useModelManager() {
     }
   });
 
-  const updateModel = (model: Model) => {
+  const updateModel = (model) => {
     selectedModel.value = model;
   };
 

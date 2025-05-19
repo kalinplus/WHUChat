@@ -15,6 +15,8 @@ import type {
   PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
+import { useChatSettingsManager } from "@/stores/settings";
+
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -22,12 +24,13 @@ const stateStore = useStateStore();
 const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
-const frugalMode = ref(false);
 // 定义标记常量
 const START_MARKER = "\u001C\u001C\u001C";
 // 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
 const END_MARKER = "\u001C\u200C\u001C";
 const router = useRouter();
+
+
 
 interface Settings {
   enableWebSearch: boolean;
@@ -39,14 +42,69 @@ const settings = ref<Settings>({
 });
 let isProcessingQueue = false;
 
+// 1. 添加保存设置的函数
+const loadSavedSettings = () => {
+  try {
+    const savedSettings = localStorage.getItem('chatSettings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      return {
+        enableWebSearch: parsed.enableWebSearch ?? true,
+        frugalMode: parsed.frugalMode ?? false
+      };
+    }
+  } catch (e) {
+    console.error('Failed to load saved settings:', e);
+  }
+  return {
+    enableWebSearch: true,
+    frugalMode: false
+  };
+};
+
+// 使用加载的设置初始化变量
+const savedSettings = loadSavedSettings();
+
+// 2. 添加保存设置的函数
+const saveSettings = () => {
+  try {
+    localStorage.setItem('chatSettings', JSON.stringify({
+      enableWebSearch: enableWebSearch.value,
+      frugalMode: frugalMode.value
+    }));
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+  }
+};
+
+const enableWebSearch = ref(savedSettings.enableWebSearch);
+const frugalMode = ref(savedSettings.frugalMode);
+
+// 3. 修改设置变化的处理函数
+const toggleFrugalMode = () => {
+  frugalMode.value = !frugalMode.value;
+  saveSettings();
+};
+
+const toggleWebSearch = () => {
+  enableWebSearch.value = !enableWebSearch.value;
+  saveSettings();
+};
+
+// 4. 保持与 settings 对象的同步
+watch([enableWebSearch, frugalMode], ([newEnableWebSearch, newFrugalMode]) => {
+  settings.value = {
+    enableWebSearch: newEnableWebSearch,
+    frugalMode: newFrugalMode
+  };
+}, { immediate: true });
+
 const props = defineProps({
   conversation: {
     type: Object,
     required: true,
   },
 });
-// 是否允许联网搜索
-const enableWebSearch = ref(false);
 
 // 模型选择对话框控制
 const showModelSelector = ref(false);
@@ -908,7 +966,7 @@ const hasMessages = computed(
               size="small"
               class="mr-2 my-1"
               prepend-icon="mdi-web"
-              @click="enableWebSearch = !enableWebSearch"
+              @click="toggleWebSearch"
             >
               {{ t("webSearch") }}
               <template v-slot:append>
@@ -930,13 +988,14 @@ const hasMessages = computed(
               class="d-flex align-center"
             >
               <v-btn
+                v-if="settings.frugalMode === true"
                 :color="frugalMode ? 'primary' : ''"
                 variant="outlined"
                 rounded="pill"
                 size="small"
                 class="mr-2 my-1"
                 prepend-icon="mdi-lightning-bolt"
-                @click="frugalMode = !frugalMode"
+                @click="toggleFrugalMode"
               >
                 {{ t("frugalMode") }}
                 <template v-slot:append>
