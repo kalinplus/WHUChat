@@ -1,3 +1,140 @@
+<script setup lang="ts">
+// 首先确保导入了必要的依赖
+import { ref, onMounted, computed, watch } from 'vue';
+import { useThemeManager } from "@/stores/settings";
+import { useLanguageManager } from "@/stores/settings";
+import { useStateStore } from "@/stores/states";
+import { useI18n } from "vue-i18n";
+import { useAuthFetch } from "@/composables/fetch";
+import axios from "axios"; // 如果需要使用axios
+
+// 修改模型列表的类型定义，确保与后端返回数据兼容
+interface ModelConfig {
+  id: string | number;
+  name: string;
+  description?: string;
+  logo?: string;
+  model_id: string | number;
+  model_class: string;
+  api_key?: string;
+  custom_url?: string;
+  usable?: boolean;
+}
+
+// 更新获取模型列表的函数
+const fetchModels = async () => {
+  loadingModels.value = true;
+  try {
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const url = `${baseUrl}/api/v1/models`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // 携带cookie
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.error !== undefined && data.error !== 0) {
+      throw new Error(`API error: ${data.error}`);
+    }
+    
+    // 处理返回的模型列表数据
+    if (Array.isArray(data)) {
+      // 将后端返回的模型数据映射为前端需要的格式
+      const validatedModels: ModelConfig[] = data.map(model => ({
+        id: String(model.id),
+        name: model.model || 'Unknown Model', // 后端返回的是model字段
+        description: getModelDescription(model.model), // 根据模型名称生成描述
+        logo: `/models/${getLogo(model.model)}`, // 根据模型名称获取logo
+        model_id: model.id, // 使用id作为model_id，保持原始类型
+        model_class: getModelClass(model.model), // 根据模型名称推断class
+        usable: model.usable, // 保存可用状态
+      }));
+      
+      console.log("Fetched models:", validatedModels);
+      availableModels.value = validatedModels;
+      
+      // 如果当前没有选择的模型，选择第一个可用的模型
+      if (!selectedModel.value && validatedModels.length > 0) {
+        const firstUsableModel = validatedModels.find(model => model.usable !== false);
+        if (firstUsableModel) {
+          handleModelSelect(firstUsableModel);
+        }
+      }
+    } else {
+      console.error('Unexpected response format: models is not an array', data);
+    }
+  } catch (err) {
+    console.error('Error fetching models:', err);
+    // 显示错误消息给用户
+    showSnackbar(err.message || '获取模型列表失败');
+  } finally {
+    loadingModels.value = false;
+  }
+};
+
+// 辅助函数：根据模型名称获取logo
+function getLogo(modelName: string): string {
+  if (!modelName) return 'default.png';
+  
+  const name = modelName.toLowerCase();
+  if (name.includes('gpt')) return 'openai.png';
+  if (name.includes('claude')) return 'anthropic.png';
+  if (name.includes('gemini')) return 'gemini.png';
+  if (name.includes('llama')) return 'llama.png';
+  return 'default.png';
+}
+
+// 辅助函数：根据模型名称获取模型类
+function getModelClass(modelName: string): string {
+  if (!modelName) return 'unknown';
+  
+  const name = modelName.toLowerCase();
+  if (name.includes('gpt')) return 'openai';
+  if (name.includes('claude')) return 'anthropic';
+  if (name.includes('gemini')) return 'google';
+  if (name.includes('llama')) return 'meta';
+  return 'unknown';
+}
+
+// 辅助函数：根据模型名称生成描述
+function getModelDescription(modelName: string): string {
+  if (!modelName) return '';
+  
+  const name = modelName.toLowerCase();
+  if (name.includes('gpt-4')) return 'OpenAI GPT-4';
+  if (name.includes('gpt-3.5')) return 'OpenAI GPT-3.5 Turbo';
+  if (name.includes('claude')) return 'Anthropic Claude';
+  if (name.includes('gemini')) return 'Google Gemini';
+  if (name.includes('llama')) return 'Meta LLaMA';
+  return modelName;
+}
+
+// 添加一个显示错误消息的函数（如果你没有）
+const snackbar = ref(false);
+const snackbarText = ref('');
+const showSnackbar = (text: string) => {
+  snackbarText.value = text;
+  snackbar.value = true;
+};
+
+// 在onMounted钩子中调用fetchModels函数
+onMounted(() => {
+  // 其他初始化代码...
+  
+  // 获取可用模型列表
+  fetchModels();
+});
+</script>
+
 <template>
   <v-dialog
     :model-value="modelValue"
@@ -350,13 +487,6 @@ function getModelDescription(modelName: string): string {
   if (name.includes('llama')) return 'Meta LLaMA';
   return modelName;
 }
-// 添加一个显示错误消息的函数（如果你没有）
-const snackbar = ref(false);
-const snackbarText = ref('');
-const showSnackbar = (text: string) => {
-  snackbarText.value = text;
-  snackbar.value = true;
-};
 
 // 保存设置
 const saveSettings = () => {
@@ -432,7 +562,7 @@ onMounted(() => {
   }
   
   // 获取可用模型列表
-  fetchModels(); 
+  // fetchModels(); // 取消注释如果需要从API获取模型列表
 });
 </script>
 

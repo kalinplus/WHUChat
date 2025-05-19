@@ -27,7 +27,6 @@
                     v-bind="props"
                     variant="outlined"
                     class="mt-2 w-100 d-flex justify-start"
-                    :loading="loadingModels"
                   >
                     <div class="d-flex align-center">
                       <v-avatar size="24" class="mr-2" v-if="selectedModel && selectedModel.logo">
@@ -43,9 +42,7 @@
                   <v-list-item
                     v-for="model in availableModels"
                     :key="model.id"
-                    @click="model.usable !== false && handleModelSelect(model)"
-                    :disabled="model.usable === false"
-                    :class="{ 'disabled-model': model.usable === false }"
+                    @click="handleModelSelect(model)"
                   >
                     <template v-slot:prepend>
                       <v-avatar size="24" v-if="model.logo">
@@ -54,20 +51,9 @@
                     </template>
                     <v-list-item-title>{{ model.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ model.description }}</v-list-item-subtitle>
-                    <v-list-item-subtitle v-if="model.usable === false" class="text-error">
-                      不可用
-                    </v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
               </v-menu>
-
-              <!-- 添加Snackbar用于显示错误消息 -->
-              <v-snackbar v-model="snackbar" timeout="3000">
-                {{ snackbarText }}
-                <template v-slot:actions>
-                  <v-btn variant="text" @click="snackbar = false">关闭</v-btn>
-                </template>
-              </v-snackbar>
             </v-list-item-subtitle>
           </v-list-item>
           
@@ -92,6 +78,24 @@
                 :label="$t('settings.customUrl') || 'Custom API URL'"
                 hide-details
                 variant="outlined"
+              ></v-text-field>
+            </v-list-item-subtitle>
+          </v-list-item>
+
+          <!-- 全局API设置 -->
+          <v-list-item>
+            <template #prepend>
+              <v-icon>mdi-key-chain</v-icon>
+            </template>
+            <v-list-item-title>{{ $t("settings.globalApi") || "Global API Settings" }}</v-list-item-title>
+            <v-list-item-subtitle>
+              <v-text-field
+                v-model="globalApiKey"
+                :label="$t('settings.defaultApiKey') || 'Default API Key'"
+                type="password"
+                variant="outlined"
+                class="mt-2"
+                hide-details
               ></v-text-field>
             </v-list-item-subtitle>
           </v-list-item>
@@ -180,19 +184,17 @@ import { useLanguageManager } from "@/stores/settings";
 import { useStateStore } from "@/stores/states";
 import { useI18n } from "vue-i18n";
 import { useAuthFetch } from "@/composables/fetch";
-import axios from "axios"; // 如果需要使用axios
 
 // 接口定义
 interface ModelConfig {
-  id: string | number;
+  id: string;
   name: string;
   description?: string;
   logo?: string;
-  model_id: string | number;
+  model_id: string;
   model_class: string;
   api_key?: string;
   custom_url?: string;
-  usable?: boolean;
 }
 
 const { t } = useI18n();
@@ -243,6 +245,7 @@ const selectedModel = ref<ModelConfig | null>(stateStore.currentModel || null);
 const loadingModels = ref(false);
 
 // API 相关状态
+const globalApiKey = ref(stateStore.apiKey || '');
 const modelApiKey = ref('');
 const modelCustomUrl = ref('');
 
@@ -270,92 +273,37 @@ const handleModelSelect = (model: ModelConfig) => {
 const fetchModels = async () => {
   loadingModels.value = true;
   try {
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/models`;
-    
-    const response = await fetch(url, {
+    const { data, error } = await useAuthFetch('/api/v1/models', {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // 携带cookie
+      params: {
+        uuid: stateStore.user?.id || 1
+      }
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.error !== undefined && data.error !== 0) {
-      throw new Error(`API error: ${data.error}`);
-    }
-    
-    // 处理返回的模型列表数据
-    if (Array.isArray(data)) {
-      // 将后端返回的模型数据映射为前端需要的格式
-      const validatedModels: ModelConfig[] = data.map(model => ({
-        id: String(model.id),
-        name: model.model || 'Unknown Model', // 后端返回的是model字段
-        description: getModelDescription(model.model), // 根据模型名称生成描述
-        logo: `/models/${getLogo(model.model)}`, // 根据模型名称获取logo
-        model_id: model.id, // 使用id作为model_id，保持原始类型
-        model_class: getModelClass(model.model), // 根据模型名称推断class
-        usable: model.usable, // 保存可用状态
-      }));
-      
-      console.log("Fetched models:", validatedModels);
-      availableModels.value = validatedModels;
-      
-      // 如果当前没有选择的模型，选择第一个可用的模型
-      if (!selectedModel.value && validatedModels.length > 0) {
-        const firstUsableModel = validatedModels.find(model => model.usable !== false);
-        if (firstUsableModel) {
-          handleModelSelect(firstUsableModel);
-        }
+    if (!error.value && data.value) {
+      if (Array.isArray(data.value)) {
+        // 确保每个模型对象都符合 ModelConfig 接口要求
+        const validatedModels: ModelConfig[] = data.value.map(model => ({
+          id: model.id || '',
+          name: model.name || 'Unknown Model',
+          description: model.description || '',
+          logo: model.logo || '/models/default.png',
+          model_id: model.model_id || model.id || '',
+          model_class: model.model_class || 'unknown',
+        }));
+        
+        availableModels.value = validatedModels;
+      } else {
+        console.error('Unexpected response format: models is not an array', data.value);
       }
     } else {
-      console.error('Unexpected response format: models is not an array', data);
+      console.error('Failed to fetch models:', error.value);
     }
   } catch (err) {
     console.error('Error fetching models:', err);
-    // 显示错误消息给用户
-    showSnackbar(err.message || '获取模型列表失败');
   } finally {
     loadingModels.value = false;
   }
-};
-
-// 辅助函数：根据模型名称获取模型类
-function getModelClass(modelName: string): string {
-  if (!modelName) return 'unknown';
-  
-  const name = modelName.toLowerCase();
-  if (name.includes('gpt')) return 'openai';
-  if (name.includes('claude')) return 'anthropic';
-  if (name.includes('gemini')) return 'google';
-  if (name.includes('llama')) return 'meta';
-  return 'unknown';
-}
-
-// 辅助函数：根据模型名称生成描述
-function getModelDescription(modelName: string): string {
-  if (!modelName) return '';
-  
-  const name = modelName.toLowerCase();
-  if (name.includes('gpt-4')) return 'OpenAI GPT-4';
-  if (name.includes('gpt-3.5')) return 'OpenAI GPT-3.5 Turbo';
-  if (name.includes('claude')) return 'Anthropic Claude';
-  if (name.includes('gemini')) return 'Google Gemini';
-  if (name.includes('llama')) return 'Meta LLaMA';
-  return modelName;
-}
-// 添加一个显示错误消息的函数（如果你没有）
-const snackbar = ref(false);
-const snackbarText = ref('');
-const showSnackbar = (text: string) => {
-  snackbarText.value = text;
-  snackbar.value = true;
 };
 
 // 保存设置
@@ -385,6 +333,9 @@ const saveSettings = () => {
     localStorage.setItem("modelConfigs", JSON.stringify(stateStore.modelConfigs));
   }
   
+  // 保存全局API Key
+  stateStore.setApiKey(globalApiKey.value);
+  localStorage.setItem("apiKey", globalApiKey.value);
   
   // 保存聊天设置
   updateChatSettings();
@@ -432,23 +383,12 @@ onMounted(() => {
   }
   
   // 获取可用模型列表
-  fetchModels(); 
+  // fetchModels(); // 取消注释如果需要从API获取模型列表
 });
 </script>
 
 <style scoped>
 .w-100 {
   width: 100%;
-}
-</style>
-
-<style scoped>
-.w-100 {
-  width: 100%;
-}
-
-.disabled-model {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

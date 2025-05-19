@@ -15,6 +15,7 @@ export interface ModelConfig {
 export const useStateStore = defineStore("stateStore", {
   state: () => ({
     currentModel: getCurrentModel() as ModelConfig, 
+    apiKey: getStoredApiKey(), // 全局默认API Key，但我们会添加每个模型特定的存储
     modelConfigs: {} as Record<string, ModelConfig>, // 存储每个模型的配置，包括API Key
     conversations: [] as any[],
     user: null as any,
@@ -52,6 +53,10 @@ export const useStateStore = defineStore("stateStore", {
           this.currentModel.api_key = key;
           localStorage.setItem("currentModel", JSON.stringify(this.currentModel));
         }
+      } else {
+        // 设置全局默认API Key
+        this.apiKey = key;
+        localStorage.setItem("apiKey", key);
       }
     },
     setModelCustomUrl(url: string, modelId: string) {
@@ -93,7 +98,7 @@ export const useStateStore = defineStore("stateStore", {
     },
     getModelApiKey(modelId: string): string {
       // 获取指定模型的API Key，如果没有则返回默认API Key
-      return this.modelConfigs[modelId]?.api_key || '';
+      return this.modelConfigs[modelId]?.api_key || this.apiKey || '';
     },
     addConversation(conversation: any) {
       this.conversations.push(conversation);

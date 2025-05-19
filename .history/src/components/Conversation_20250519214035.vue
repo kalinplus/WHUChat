@@ -237,19 +237,15 @@ const setupWebSocket = (sessionId: number) => {
     ws.value.close();
   }
 
-  const modelId = typeof currentModel.value.model_id === 'string' 
-    ? parseInt(currentModel.value.model_id as string, 10) 
-    : (currentModel.value.model_id as number);
-
   // 创建新的WebSocket连接
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
-    stateStore.user?.id || 1
+    1 || stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    modelId
+    1 || currentModel.value.model_id
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
@@ -447,7 +443,9 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
-  // 添加请求超时
+  // console.log(Number(import.meta.env.VITE_SEND_TIMEOUT))
+
+  // Add a timeout for the fetch request
   fetchTimeout = setTimeout(() => {
     abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
@@ -459,28 +457,17 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 格式化用户消息为接口需要的格式
   const formattedPrompt: PromptArrayItem[] = message.map(
     (m: PromptArrayItem) => ({
-      type: m.type === "image" ? "image" : "text", // 默认为text类型
+      type: m.type === "image" ? "image" : "text", // TODO: 反正现在type不会是image，所以默认是text
       text: m.text,
     })
   );
 
-  const modelId = typeof currentModel.value.model_id === 'string' 
-    ? parseInt(currentModel.value.model_id as string, 10) 
-    : (currentModel.value.model_id as number);
-
-  // 检查模型ID是否有效
-  if (isNaN(modelId)) {
-    console.error("Invalid model ID:", currentModel.value.model_id);
-    showSnackbar("模型ID无效，请在设置中选择有效的模型");
-    return;
-  }
-
-  // 使用转换后的modelId构建请求数据
+  // TODO: 现在先写死，之后配合登录后存入 stateStore，以及 getChatServer 接口获取信息）即使这样，也要存到 stateStore 中）
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.id || 1,
-    session_id: props.conversation.id || null,
+    uuid: 1 || stateStore.user.id, // 用户ID
+    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
     sender: "user",
-    model_id: modelId, // 使用转换后的modelId
+    model_id: 1, // 模型ID
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
@@ -493,32 +480,29 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     } as ChatParameters,
   };
 
-  console.log("Sending chat request with model:", currentModel.value.name, "(ID:", requestData.model_id, ")");
+  console.log("Sending chat request:", requestData);
 
-  // 添加API密钥（如果设置了）
-  if (currentModel.value.api_key) {
-    requestData.api_key = currentModel.value.api_key;
-    console.log("Using model-specific API key");
-  }
-
-  // 添加自定义URL（如果设置了）
-  if (currentModel.value.custom_url) {
+  // 如果用户提供了自定义API URL和Key，则添加到请求中，没有就算了
+  // 只有一个没用，所以一定一起添加。虽然一起也不知道有没有用，实现了吗
+  if (currentModel.value.custom_url && currentModel.value.api_key) {
     requestData.URL = currentModel.value.custom_url;
-    console.log("Using custom URL:", currentModel.value.custom_url);
+    requestData.api_key = currentModel.value.api_key;
   }
 
   try {
     stateStore.fetchingResponse = true;
 
     // 发送HTTP POST请求
+    // FIXME: 测试用 URL
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
+      // const response = await fetch("/api/v1/chat/send_message", {
       signal: ctrl.signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // 显式携带cookie
+      credentials: "include", // 添加这一行来显式携带 cookie
       body: JSON.stringify(requestData),
     });
 
@@ -533,11 +517,8 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       throw new Error(`API error: ${responseData.error}`);
     }
 
-    // 清除超时
-    if (fetchTimeout) {
-      clearTimeout(fetchTimeout);
-      fetchTimeout = null;
-    }
+    // Clear the timeout on successful response
+    clearTimeout(fetchTimeout);
 
     // 准备接收消息 - 建立WebSocket连接
     setupWebSocket(responseData.session_id || props.conversation.id);
@@ -546,21 +527,23 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
 
-      // 路由跳转
+      // 3. 在获取到新的 session_id 后，进行路由跳转
+      // 确保在 props.conversation.id 更新后执行
+      // 并且在 setupWebSocket 之后，以防 WebSocket 依赖于旧的 props.conversation.id (虽然这里它直接用 responseData.session_id)
       router.push(`/${requestData.uuid}/${responseData.session_id}`);
 
       const newTitle =
         formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat");
-      // 更新标题
+      // Update title via API
       try {
         const updateTitleRequestData = {
           new_title: newTitle,
-          uuid: stateStore.user?.id || 1,
+          uuid: 1 || stateStore.user.id, // TODO: Consistent with other UUID usage
           session_id: responseData.session_id,
         };
 
         console.log("Updating title with data:", updateTitleRequestData);
-        // 假设API端点位于/api/v1/
+        // Assuming the new endpoint is also under /api/v1/
         const updateTitleResponse = await fetch(
           `${baseUrl}/api/v1/chat/update_title`,
           {
@@ -578,6 +561,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
           console.error(
             `Failed to update title: HTTP ${updateTitleResponse.status}. Response: ${errorText}`
           );
+          // Optionally show a non-critical snackbar
         } else {
           const updateTitleResponseData = await updateTitleResponse.json();
           if (updateTitleResponseData.error !== 0) {
@@ -586,14 +570,16 @@ const fetchReply = async (message: PromptArrayItem[]) => {
             );
           } else {
             console.log("Conversation title updated successfully via API.");
-            // 更新本地会话标题以提供即时UI反馈
+            // Optionally update local conversation title if it's reactive and displayed
+            // This assumes your conversation object can have a 'title' property.
             if (props.conversation && typeof props.conversation === "object") {
-              (props.conversation as any).title = newTitle;
+              (props.conversation as any).title = newTitle; // Update local title for immediate UI feedback
             }
           }
         }
       } catch (titleError) {
         console.error("Error sending update_title request:", titleError);
+        // Optionally show a non-critical snackbar
       }
     }
   } catch (err: any) {
@@ -603,8 +589,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     showSnackbar(err.message);
   }
 };
-
-
 // 自动滚动聊天窗口
 const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;

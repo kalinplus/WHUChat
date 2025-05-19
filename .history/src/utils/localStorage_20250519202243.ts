@@ -41,10 +41,8 @@ export function getCurrentModel() {
     name: "Claude 3 Haiku",
     description: "Anthropic Claude 3 Haiku",
     logo: "/models/anthropic.png",
-    model_id: "claude-3-haiku",
-    model_class: "anthropic",
-    api_key: "", // 添加API Key字段
-    custom_url: "", // 添加自定义URL字段
+    model_id: "claude-3-haiku",    // 接口要求的字段
+    model_class: "anthropic",      // 接口要求的字段
   };
 
   try {

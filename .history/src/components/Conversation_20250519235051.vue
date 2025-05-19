@@ -237,19 +237,15 @@ const setupWebSocket = (sessionId: number) => {
     ws.value.close();
   }
 
-  const modelId = typeof currentModel.value.model_id === 'string' 
-    ? parseInt(currentModel.value.model_id as string, 10) 
-    : (currentModel.value.model_id as number);
-
   // 创建新的WebSocket连接
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
-    stateStore.user?.id || 1
+    1 || stateStore.user?.id
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    modelId
+    1 || currentModel.value.model_id
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
@@ -464,23 +460,17 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     })
   );
 
+  // 在这里添加modelId的转换
   const modelId = typeof currentModel.value.model_id === 'string' 
     ? parseInt(currentModel.value.model_id as string, 10) 
     : (currentModel.value.model_id as number);
 
-  // 检查模型ID是否有效
-  if (isNaN(modelId)) {
-    console.error("Invalid model ID:", currentModel.value.model_id);
-    showSnackbar("模型ID无效，请在设置中选择有效的模型");
-    return;
-  }
-
-  // 使用转换后的modelId构建请求数据
+  // 使用当前选择的模型，而不是硬编码的ID
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.id || 1,
-    session_id: props.conversation.id || null,
+    uuid: stateStore.user?.id || 1, // 用户ID
+    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
     sender: "user",
-    model_id: modelId, // 使用转换后的modelId
+    model_id: currentModel.value.model_id || currentModel.value.id || 1, // 使用当前选择的模型ID
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,

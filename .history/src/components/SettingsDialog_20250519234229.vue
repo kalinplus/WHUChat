@@ -350,13 +350,6 @@ function getModelDescription(modelName: string): string {
   if (name.includes('llama')) return 'Meta LLaMA';
   return modelName;
 }
-// 添加一个显示错误消息的函数（如果你没有）
-const snackbar = ref(false);
-const snackbarText = ref('');
-const showSnackbar = (text: string) => {
-  snackbarText.value = text;
-  snackbar.value = true;
-};
 
 // 保存设置
 const saveSettings = () => {
@@ -432,7 +425,7 @@ onMounted(() => {
   }
   
   // 获取可用模型列表
-  fetchModels(); 
+  // fetchModels(); // 取消注释如果需要从API获取模型列表
 });
 </script>
 

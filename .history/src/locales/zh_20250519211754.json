@@ -64,11 +64,7 @@
     "apiKey": "API密钥",
     "chatSettings": "聊天设置",
     "enableWebSearch": "启用网页搜索",
-    "frugalMode": "节俭模式",
-    "globalApi": "全局API设置",
-    "defaultApiKey": "默认API密钥",
-    "customUrl": "自定义API端点URL",
-    "saveAndClose": "保存并关闭"
+    "frugalMode": "节俭模式"
   },
   "welcomeScreen": {
     "introduction1": "是一个简单易用的一站式平台，在这里你可以与各种各样的模型对话",

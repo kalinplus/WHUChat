@@ -93,7 +93,7 @@ export const useStateStore = defineStore("stateStore", {
     },
     getModelApiKey(modelId: string): string {
       // 获取指定模型的API Key，如果没有则返回默认API Key
-      return this.modelConfigs[modelId]?.api_key || '';
+      return this.modelConfigs[modelId]?.api_key || this.apiKey || '';
     },
     addConversation(conversation: any) {
       this.conversations.push(conversation);

@@ -122,11 +122,7 @@
     "apiKey": "API Key",
     "chatSettings": "Chat Settings",
     "enableWebSearch": "Enable Web Search",
-    "frugalMode": "Frugal Mode",
-    "globalApi": "Global API Settings",
-    "defaultApiKey": "Default API Key",
-    "customUrl": "Custom API Endpoint URL",
-    "saveAndClose": "Save & Close"
+    "frugalMode": "Frugal Mode"
   },
   "selectModel": "Select Model",
   "close": "Close",

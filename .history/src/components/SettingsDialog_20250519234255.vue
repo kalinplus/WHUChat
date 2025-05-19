@@ -432,7 +432,7 @@ onMounted(() => {
   }
   
   // 获取可用模型列表
-  fetchModels(); 
+  // fetchModels(); // 取消注释如果需要从API获取模型列表
 });
 </script>
 

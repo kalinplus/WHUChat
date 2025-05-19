@@ -52,6 +52,10 @@ export const useStateStore = defineStore("stateStore", {
           this.currentModel.api_key = key;
           localStorage.setItem("currentModel", JSON.stringify(this.currentModel));
         }
+      } else {
+        // 设置全局默认API Key
+        this.apiKey = key;
+        localStorage.setItem("apiKey", key);
       }
     },
     setModelCustomUrl(url: string, modelId: string) {
@@ -93,7 +97,7 @@ export const useStateStore = defineStore("stateStore", {
     },
     getModelApiKey(modelId: string): string {
       // 获取指定模型的API Key，如果没有则返回默认API Key
-      return this.modelConfigs[modelId]?.api_key || '';
+      return this.modelConfigs[modelId]?.api_key || this.apiKey || '';
     },
     addConversation(conversation: any) {
       this.conversations.push(conversation);
