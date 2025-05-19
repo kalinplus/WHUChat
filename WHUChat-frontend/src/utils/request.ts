@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // 从环境变量获取配置（需在 .env 文件中配置）
-const baseURL = "http://localhost:8080";
+const baseURL = "http://localhost:8091";
 const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 10000;
 
 // 创建 axios 实例

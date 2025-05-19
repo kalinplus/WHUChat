@@ -14,7 +14,7 @@ import { fileURLToPath, URL } from "node:url";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/static",
+ base: "./",
   plugins: [
     VueRouter({
       dts: "src/typed-router.d.ts",
@@ -65,8 +65,8 @@ export default defineConfig({
     extensions: [".js", ".json", ".jsx", ".mjs", ".ts", ".tsx", ".vue"],
   },
   server: {
-    // port: 3000,
-    port: 8091,
+    port: 3000,
+    // port: 8091,
     https: {
       key: fs.readFileSync("src/server/server.key"),
       cert: fs.readFileSync("src/server/server.crt"),
@@ -79,4 +79,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+  },
+
 });
