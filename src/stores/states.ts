@@ -1,16 +1,19 @@
 import { defineStore } from "pinia";
 import { getCurrentModel, getStoredApiKey } from "@/utils/localStorage";
 
-export interface ModelConfig {
-  id: string;
+// 接口定义
+interface ModelConfig {
+  id: string | number;
   name: string;
-  description: string;
+  description?: string;
   logo?: string;
-  model_id: string;
+  model_id: string | number;
   model_class: string;
   api_key?: string;
   custom_url?: string;
+  usable?: boolean;
 }
+
 
 export const useStateStore = defineStore("stateStore", {
   state: () => ({
