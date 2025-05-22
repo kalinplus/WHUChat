@@ -295,7 +295,8 @@ const fetchModels = async () => {
   } catch (err) {
     console.error('Error fetching models:', err);
     // 显示错误消息给用户
-    showSnackbar(err.message || '获取模型列表失败');
+    const errorMessage = err instanceof Error ? err.message : '获取模型列表失败';
+    showSnackbar(errorMessage);
   } finally {
     loadingModels.value = false;
   }
