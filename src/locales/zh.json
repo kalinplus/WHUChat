@@ -53,12 +53,22 @@
     "ai": "AI"
   },
   "settings": {
-    "title": "系统设置",
-    "theme": "主题模式",
-    "language": "界面语言",
-    "lightMode": "明亮模式",
-    "darkMode": "暗色模式",
-    "followSystem": "跟随系统"
+    "title": "设置",
+    "theme": "主题",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式",
+    "followSystem": "跟随系统",
+    "language": "语言",
+    "models": "模型选择",
+    "api": "API设置",
+    "apiKey": "API密钥",
+    "chatSettings": "聊天设置",
+    "enableWebSearch": "启用网页搜索",
+    "frugalMode": "节俭模式",
+    "globalApi": "全局API设置",
+    "defaultApiKey": "默认API密钥",
+    "customUrl": "自定义API端点URL",
+    "saveAndClose": "保存并关闭"
   },
   "welcomeScreen": {
     "introduction1": "是一个简单易用的一站式平台，在这里你可以与各种各样的模型对话",
