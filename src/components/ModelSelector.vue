@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
 
 const { t } = useI18n();
 const stateStore = useStateStore();
-const defaultModel = {
-  id: "gpt-4",
-  name: "GPT-4",
-  description: "OpenAI GPT-4",
-  logo: "/models/openai.png", // 简单使用一个占位路径
-};
 
-const availableModels = ref([]);
+// 先添加接口定义（在 script 标签开头）
+interface ModelConfig {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+  model_id: string | number;
+  usable: boolean;
+}
+
+// 然后修改第25行
+const availableModels = ref<ModelConfig[]>([]);
 
 const props = defineProps({
   modelValue: {
@@ -28,7 +33,7 @@ const closeDialog = () => {
   emit("update:modelValue", false);
 };
 
-const selectModel = (model: any) => {
+const selectModel = (model: ModelConfig) => {
   emit("select", model);
 };
 
