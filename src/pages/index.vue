@@ -1,4 +1,4 @@
-<script setup lang="ts">
++++++++++++++++<script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { getDefaultConversationData } from "@/utils/helper";
 import { useRoute, useRouter } from "vue-router";
@@ -185,7 +185,7 @@ const signOut = async () => {
   justify-content: center;
   padding: 16px;
   margin-top: 64px;
-  background-color: white; /* Add a background color */
+  background-color: rgb(var(--v-theme-background)); /* Add a background color */
 }
 
 .content-inner {
