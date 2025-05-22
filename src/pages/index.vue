@@ -1,4 +1,9 @@
-+++++++++++++++<script setup lang="ts">
+<route lang="yaml">
+meta:
+  requiresAuth: true
+</route>
+
+<script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { getDefaultConversationData } from "@/utils/helper";
 import { useRoute, useRouter } from "vue-router";
@@ -6,7 +11,6 @@ import { useI18n } from "vue-i18n";
 import { useAuthFetch } from "@/composables/fetch";
 import { useStateStore } from "@/stores/states";
 import { useUser } from "@/composables/states";
-
 
 const stateStore = useStateStore();
 const { t } = useI18n();
