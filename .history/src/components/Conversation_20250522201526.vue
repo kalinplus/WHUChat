@@ -975,6 +975,7 @@ const hasMessages = computed(
 
             <!-- 网页搜索按钮 -->
             <v-btn
+              v-if="settings.enableWebSearch === true"
               :color="enableWebSearch ? 'primary' : ''"
               variant="outlined"
               rounded="pill"
@@ -999,9 +1000,11 @@ const hasMessages = computed(
 
             <!-- 节俭模式按钮 -->
             <div
+              v-if="settings.frugalMode === true"
               class="d-flex align-center"
             >
               <v-btn
+                v-if="settings.frugalMode === true"
                 :color="frugalMode ? 'primary' : ''"
                 variant="outlined"
                 rounded="pill"
