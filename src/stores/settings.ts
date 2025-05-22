@@ -2,7 +2,6 @@ import { useTheme } from "vuetify";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-
 export function useLanguageManager() {
   const { locale } = useI18n({ useScope: "global" });
   const languageOptions = [
@@ -11,9 +10,8 @@ export function useLanguageManager() {
   ];
   const savedLanguage = localStorage.getItem("languagePreference");
   if (savedLanguage) {
-    console.log(savedLanguage)
+    console.log(savedLanguage);
     locale.value = savedLanguage; // 初始化时应用存储值
-
   }
   const selectedLanguage = ref(locale.value);
   const updateLanguage = (val: string) => {
@@ -24,19 +22,16 @@ export function useLanguageManager() {
   return {
     languageOptions,
     selectedLanguage,
-    updateLanguage
-  }
-
+    updateLanguage,
+  };
 }
 
-
 export function useThemeManager() {
-
   const theme = useTheme();
   const savedTheme = localStorage.getItem("themePreference");
   if (savedTheme) {
-    console.log(savedTheme)
-   theme.global.name.value=savedTheme; // 初始化时应用存储值
+    console.log(savedTheme);
+    theme.global.name.value = savedTheme; // 初始化时应用存储值
   }
   const systemQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const handleSystemChange = (e: MediaQueryListEvent) => {
@@ -50,7 +45,8 @@ export function useThemeManager() {
     window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   const selectedTheme = ref(theme.global.name.value);
-  const updateTheme = (val: "light" | "dark" | "system") => {
+  const updateTheme = (val: string) => {
+    // val should be lighe or dark or system
     if (val === "system") {
       theme.global.name.value = isSystemDarkTheme() ? "dark" : "light";
     } else {
@@ -61,7 +57,6 @@ export function useThemeManager() {
 
   return {
     selectedTheme,
-    updateTheme
-  }
+    updateTheme,
+  };
 }
-
