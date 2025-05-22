@@ -15,6 +15,8 @@ import type {
   PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
+import { useChatSettingsManager } from "@/stores/settings";
+
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -22,12 +24,13 @@ const stateStore = useStateStore();
 const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
-const frugalMode = ref(false);
 // 定义标记常量
 const START_MARKER = "\u001C\u001C\u001C";
 // 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
 const END_MARKER = "\u001C\u200C\u001C";
 const router = useRouter();
+
+
 
 interface Settings {
   enableWebSearch: boolean;
@@ -39,14 +42,69 @@ const settings = ref<Settings>({
 });
 let isProcessingQueue = false;
 
+// 1. 添加保存设置的函数
+const loadSavedSettings = () => {
+  try {
+    const savedSettings = localStorage.getItem('chatSettings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      return {
+        enableWebSearch: parsed.enableWebSearch ?? true,
+        frugalMode: parsed.frugalMode ?? false
+      };
+    }
+  } catch (e) {
+    console.error('Failed to load saved settings:', e);
+  }
+  return {
+    enableWebSearch: true,
+    frugalMode: false
+  };
+};
+
+// 使用加载的设置初始化变量
+const savedSettings = loadSavedSettings();
+
+// 2. 添加保存设置的函数
+const saveSettings = () => {
+  try {
+    localStorage.setItem('chatSettings', JSON.stringify({
+      enableWebSearch: enableWebSearch.value,
+      frugalMode: frugalMode.value
+    }));
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+  }
+};
+
+const enableWebSearch = ref(savedSettings.enableWebSearch);
+const frugalMode = ref(savedSettings.frugalMode);
+
+// 3. 修改设置变化的处理函数
+const toggleFrugalMode = () => {
+  frugalMode.value = !frugalMode.value;
+  saveSettings();
+};
+
+const toggleWebSearch = () => {
+  enableWebSearch.value = !enableWebSearch.value;
+  saveSettings();
+};
+
+// 4. 保持与 settings 对象的同步
+watch([enableWebSearch, frugalMode], ([newEnableWebSearch, newFrugalMode]) => {
+  settings.value = {
+    enableWebSearch: newEnableWebSearch,
+    frugalMode: newFrugalMode
+  };
+}, { immediate: true });
+
 const props = defineProps({
   conversation: {
     type: Object,
     required: true,
   },
 });
-// 是否允许联网搜索
-const enableWebSearch = ref(false);
 
 // 模型选择对话框控制
 const showModelSelector = ref(false);
@@ -179,15 +237,19 @@ const setupWebSocket = (sessionId: number) => {
     ws.value.close();
   }
 
+  const modelId = typeof currentModel.value.model_id === 'string' 
+    ? parseInt(currentModel.value.model_id as string, 10) 
+    : (currentModel.value.model_id as number);
+
   // 创建新的WebSocket连接
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
 
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
-    1 || stateStore.user?.id
+    stateStore.user?.id || 1
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    1 || currentModel.value.model_id
+    modelId
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
@@ -385,9 +447,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
-  // console.log(Number(import.meta.env.VITE_SEND_TIMEOUT))
-
-  // Add a timeout for the fetch request
+  // 添加请求超时
   fetchTimeout = setTimeout(() => {
     abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
@@ -399,17 +459,28 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 格式化用户消息为接口需要的格式
   const formattedPrompt: PromptArrayItem[] = message.map(
     (m: PromptArrayItem) => ({
-      type: m.type === "image" ? "image" : "text", // TODO: 反正现在type不会是image，所以默认是text
+      type: m.type === "image" ? "image" : "text", // 默认为text类型
       text: m.text,
     })
   );
 
-  // TODO: 现在先写死，之后配合登录后存入 stateStore，以及 getChatServer 接口获取信息）即使这样，也要存到 stateStore 中）
+  const modelId = typeof currentModel.value.model_id === 'string' 
+    ? parseInt(currentModel.value.model_id as string, 10) 
+    : (currentModel.value.model_id as number);
+
+  // 检查模型ID是否有效
+  if (isNaN(modelId)) {
+    console.error("Invalid model ID:", currentModel.value.model_id);
+    showSnackbar("模型ID无效，请在设置中选择有效的模型");
+    return;
+  }
+
+  // 使用转换后的modelId构建请求数据
   const requestData: ChatRequestData = {
-    uuid: 1 || stateStore.user.id, // 用户ID
-    session_id: props.conversation.id || null, // 会话ID，如果是新对话则为null
+    uuid: stateStore.user?.id || 1,
+    session_id: props.conversation.id || null,
     sender: "user",
-    model_id: 1, // 模型ID
+    model_id: modelId, // 使用转换后的modelId
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
@@ -422,29 +493,32 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     } as ChatParameters,
   };
 
-  console.log("Sending chat request:", requestData);
+  console.log("Sending chat request with model:", currentModel.value.name, "(ID:", requestData.model_id, ")");
 
-  // 如果用户提供了自定义API URL和Key，则添加到请求中，没有就算了
-  // 只有一个没用，所以一定一起添加。虽然一起也不知道有没有用，实现了吗
-  if (currentModel.value.custom_url && currentModel.value.api_key) {
-    requestData.URL = currentModel.value.custom_url;
+  // 添加API密钥（如果设置了）
+  if (currentModel.value.api_key) {
     requestData.api_key = currentModel.value.api_key;
+    console.log("Using model-specific API key");
+  }
+
+  // 添加自定义URL（如果设置了）
+  if (currentModel.value.custom_url) {
+    requestData.URL = currentModel.value.custom_url;
+    console.log("Using custom URL:", currentModel.value.custom_url);
   }
 
   try {
     stateStore.fetchingResponse = true;
 
     // 发送HTTP POST请求
-    // FIXME: 测试用 URL
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
-      // const response = await fetch("/api/v1/chat/send_message", {
       signal: ctrl.signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // 添加这一行来显式携带 cookie
+      credentials: "include", // 显式携带cookie
       body: JSON.stringify(requestData),
     });
 
@@ -459,8 +533,11 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       throw new Error(`API error: ${responseData.error}`);
     }
 
-    // Clear the timeout on successful response
-    clearTimeout(fetchTimeout);
+    // 清除超时
+    if (fetchTimeout) {
+      clearTimeout(fetchTimeout);
+      fetchTimeout = null;
+    }
 
     // 准备接收消息 - 建立WebSocket连接
     setupWebSocket(responseData.session_id || props.conversation.id);
@@ -469,23 +546,21 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     if (!props.conversation.id && responseData.session_id) {
       props.conversation.id = responseData.session_id;
 
-      // 3. 在获取到新的 session_id 后，进行路由跳转
-      // 确保在 props.conversation.id 更新后执行
-      // 并且在 setupWebSocket 之后，以防 WebSocket 依赖于旧的 props.conversation.id (虽然这里它直接用 responseData.session_id)
+      // 路由跳转
       router.push(`/${requestData.uuid}/${responseData.session_id}`);
 
       const newTitle =
         formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat");
-      // Update title via API
+      // 更新标题
       try {
         const updateTitleRequestData = {
           new_title: newTitle,
-          uuid: 1 || stateStore.user.id, // TODO: Consistent with other UUID usage
+          uuid: stateStore.user?.id || 1,
           session_id: responseData.session_id,
         };
 
         console.log("Updating title with data:", updateTitleRequestData);
-        // Assuming the new endpoint is also under /api/v1/
+        // 假设API端点位于/api/v1/
         const updateTitleResponse = await fetch(
           `${baseUrl}/api/v1/chat/update_title`,
           {
@@ -503,7 +578,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
           console.error(
             `Failed to update title: HTTP ${updateTitleResponse.status}. Response: ${errorText}`
           );
-          // Optionally show a non-critical snackbar
         } else {
           const updateTitleResponseData = await updateTitleResponse.json();
           if (updateTitleResponseData.error !== 0) {
@@ -512,16 +586,14 @@ const fetchReply = async (message: PromptArrayItem[]) => {
             );
           } else {
             console.log("Conversation title updated successfully via API.");
-            // Optionally update local conversation title if it's reactive and displayed
-            // This assumes your conversation object can have a 'title' property.
+            // 更新本地会话标题以提供即时UI反馈
             if (props.conversation && typeof props.conversation === "object") {
-              (props.conversation as any).title = newTitle; // Update local title for immediate UI feedback
+              (props.conversation as any).title = newTitle;
             }
           }
         }
       } catch (titleError) {
         console.error("Error sending update_title request:", titleError);
-        // Optionally show a non-critical snackbar
       }
     }
   } catch (err: any) {
@@ -531,6 +603,8 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     showSnackbar(err.message);
   }
 };
+
+
 // 自动滚动聊天窗口
 const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;
@@ -908,7 +982,7 @@ const hasMessages = computed(
               size="small"
               class="mr-2 my-1"
               prepend-icon="mdi-web"
-              @click="enableWebSearch = !enableWebSearch"
+              @click="toggleWebSearch"
             >
               {{ t("webSearch") }}
               <template v-slot:append>
@@ -930,13 +1004,14 @@ const hasMessages = computed(
               class="d-flex align-center"
             >
               <v-btn
+                v-if="settings.frugalMode === true"
                 :color="frugalMode ? 'primary' : ''"
                 variant="outlined"
                 rounded="pill"
                 size="small"
                 class="mr-2 my-1"
                 prepend-icon="mdi-lightning-bolt"
-                @click="frugalMode = !frugalMode"
+                @click="toggleFrugalMode"
               >
                 {{ t("frugalMode") }}
                 <template v-slot:append>

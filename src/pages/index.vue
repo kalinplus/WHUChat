@@ -7,6 +7,7 @@ import { useAuthFetch } from "@/composables/fetch";
 import { useStateStore } from "@/stores/states";
 import { useUser } from "@/composables/states";
 
+
 const stateStore = useStateStore();
 const { t } = useI18n();
 const route = useRoute();

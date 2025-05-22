@@ -1,6 +1,16 @@
 import { useTheme } from "vuetify";
-import { ref } from "vue";
+import { ref, watch } from "vue";
+import { useStateStore } from "./states";
 import { useI18n } from "vue-i18n";
+
+interface Model {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+  model_id: string;
+  model_class: string;
+}
 
 export function useLanguageManager() {
   const { locale } = useI18n({ useScope: "global" });
@@ -46,17 +56,70 @@ export function useThemeManager() {
 
   const selectedTheme = ref(theme.global.name.value);
   const updateTheme = (val: string) => {
-    // val should be lighe or dark or system
-    if (val === "system") {
-      theme.global.name.value = isSystemDarkTheme() ? "dark" : "light";
-    } else {
-      theme.global.name.value = val;
+    if (val === "system" || val === "light" || val === "dark") {
+      // 现在可以安全地使用 val
+      if (val === "system") {
+        theme.global.name.value = isSystemDarkTheme() ? "dark" : "light";
+      } else {
+        theme.global.name.value = val;
+      }
+      localStorage.setItem("themePreference", val);
     }
-    localStorage.setItem("themePreference", val); // 持久化存储
   };
 
   return {
     selectedTheme,
     updateTheme,
+  };
+}
+
+export function useModelManager() {
+  const stateStore = useStateStore();
+  const selectedModel = ref(stateStore.currentModel);
+
+  // 监听模型变化并保存
+  watch(selectedModel, (newModel) => {
+    if (newModel) {
+      stateStore.setCurrentModel(newModel);
+    }
+  });
+
+  const updateModel = (model: Model) => {
+    selectedModel.value = model;
+  };
+
+  return {
+    selectedModel,
+    updateModel
+  };
+}
+
+export function useChatSettingsManager() {
+  const enableWebSearch = ref(true);
+  const frugalMode = ref(true);
+
+  // 初始化
+  const init = () => {
+    const savedSettings = localStorage.getItem('chatSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      enableWebSearch.value = settings.enableWebSearch ?? true;
+      frugalMode.value = settings.frugalMode ?? true;
+    }
+  };
+
+  init();
+
+  const updateChatSettings = () => {
+    localStorage.setItem('chatSettings', JSON.stringify({
+      enableWebSearch: enableWebSearch.value,
+      frugalMode: frugalMode.value
+    }));
+  };
+
+  return {
+    enableWebSearch,
+    frugalMode,
+    updateChatSettings
   };
 }
