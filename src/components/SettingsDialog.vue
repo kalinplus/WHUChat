@@ -211,32 +211,7 @@ const { selectedLanguage, updateLanguage, languageOptions } = useLanguageManager
 const { selectedTheme, updateTheme } = useThemeManager();
 
 // 模型相关状态
-const availableModels = ref<ModelConfig[]>([
-  {
-    id: "gpt-4",
-    name: "GPT-4",
-    description: "OpenAI GPT-4",
-    logo: "/models/openai.png",
-    model_id: "gpt-4",
-    model_class: "openai",
-  },
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    description: "OpenAI GPT-3.5 Turbo",
-    logo: "/models/openai.png",
-    model_id: "gpt-3.5-turbo",
-    model_class: "openai",
-  },
-  {
-    id: "claude-3",
-    name: "Claude 3",
-    description: "Anthropic Claude 3",
-    logo: "/models/anthropic.png",
-    model_id: "claude-3",
-    model_class: "anthropic",
-  },
-]);
+const availableModels = ref<ModelConfig[]>([]);
 
 // 初始化选中的模型为当前状态中的模型
 const selectedModel = ref<ModelConfig | null>(stateStore.currentModel || null);
@@ -271,7 +246,7 @@ const fetchModels = async () => {
   loadingModels.value = true;
   try {
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/models`;
+    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.id || 1)}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -336,6 +311,18 @@ function getModelClass(modelName: string): string {
   if (name.includes('gemini')) return 'google';
   if (name.includes('llama')) return 'meta';
   return 'unknown';
+}
+
+// 辅助函数：根据模型名称获取logo文件名
+function getLogo(modelName: string): string {
+  if (!modelName) return 'unknown.png';
+  
+  const name = modelName.toLowerCase();
+  if (name.includes('gpt')) return 'openai.png';
+  if (name.includes('claude')) return 'anthropic.png';
+  if (name.includes('gemini')) return 'google.png';
+  if (name.includes('llama')) return 'meta.png';
+  return 'unknown.png';
 }
 
 // 辅助函数：根据模型名称生成描述
