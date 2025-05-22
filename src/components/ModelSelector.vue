@@ -12,22 +12,8 @@ const defaultModel = {
   description: "OpenAI GPT-4",
   logo: "/models/openai.png", // 简单使用一个占位路径
 };
-// TODO: 后续通过后端获取
-const availableModels = ref([
-  defaultModel,
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    description: "OpenAI GPT-3.5 Turbo",
-    logo: "/models/openai.png",
-  },
-  {
-    id: "claude-3",
-    name: "Claude 3",
-    description: "Anthropic Claude 3",
-    logo: "/models/anthropic.png",
-  },
-]);
+
+const availableModels = ref([]);
 
 const props = defineProps({
   modelValue: {
@@ -45,6 +31,44 @@ const closeDialog = () => {
 const selectModel = (model: any) => {
   emit("select", model);
 };
+
+// 获取模型列表
+const fetchModels = async () => {
+  try {
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.id || 1)}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        availableModels.value = data.map(model => ({
+          id: String(model.id),
+          name: model.model || 'Unknown Model',
+          description: model.model,
+          logo: "/models/anthropic.png", // 默认logo
+          model_id: model.id,
+          usable: model.usable,
+        }));
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching models:', error);
+  }
+};
+
+// 组件挂载时获取模型列表
+onMounted(() => {
+  fetchModels();
+});
+
 </script>
 
 <template>
