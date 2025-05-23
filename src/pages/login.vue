@@ -51,14 +51,17 @@
 import { ref, computed } from "vue";
 import type { VForm } from "vuetify/components";
 import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthFetch } from "@/composables/fetch";
+import { useStateStore } from "@/stores/states";
 
 // ======================
 // 依赖注入
 // ======================
 const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
+const stateStore = useStateStore();
 
 // ======================
 // 响应式状态声明
@@ -188,21 +191,28 @@ const handleLogin = async () => {
 // 成功处理
 // ======================
 const handleLoginSuccess = () => {
-  // 检查重定向
-  setTimeout(() => {
-    const path = window.location.pathname.toString();
-    if (path !== "/") {
-      router.push("/");
-    }
-  }, 1000);
-
-  // 调试日志
-  const cookies = parseCookies();
-  console.log("Cookie:", cookies);
+  // Update Pinia state
+  stateStore.setUser({
+    uuid: loginResult.value?.uuid,
+    username: loginForm.value.email,
+    addr: null, // Explicitly set addr to null as it's not available from the login API
+  });
 
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
+
+  // New redirect logic
+  const redirectPath = route.query.redirect as string | undefined;
+  if (redirectPath) {
+    router.push(redirectPath);
+  } else {
+    router.push('/chat'); // Default redirect if no query param
+  }
+
+  // 调试日志
+  const cookies = parseCookies();
+  console.log("Cookie:", cookies);
 };
 </script>
 
