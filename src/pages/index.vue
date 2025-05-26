@@ -87,11 +87,14 @@ const createNewConversation = () => {
     topic: t("newConversation"),
   });
 };
+
 const signIn = () => {
-  router.push("/login");
+  // router.push("/login");
+  window.location.href = "/login";
 };
 const signUp = () => {
-  router.push("/register");
+  // router.push("/register");
+  window.location.href = "/register";
 };
 
 // 计算属性：导航标题  当值发生变化，即切换话题时，重新计算并渲染
@@ -128,17 +131,27 @@ const openSettings = () => {
 
 // TODO: 退出登录，需要适配我们的接口和登录页面。注意 NavDrawer 里也有这个，可能重了
 const signOut = async () => {
-  // 调用退出登录API
-  const { data, error } = await useAuthFetch("/api/account/logout/", {
-    method: "POST",
-  });
+  try {
+    // 调用退出登录API
+    const { data, error } = await useAuthFetch("/api/account/logout/", {
+      method: "POST",
+    });
 
-  if (!error.value) {
-    // 清除用户状态
-    stateStore.setUser(null);
+    if (!error.value) {
+      // 清除用户状态
+      stateStore.setUser(null);
 
-    // 跳转到登录页
-    router.push("/login");
+      // 🔧 使用原生页面跳转到登录页
+      window.location.href = "/login";
+    } else {
+      console.error("Logout failed:", error.value);
+      // 即使API调用失败，也可以考虑强制跳转到登录页
+      // window.location.href = "/login";
+    }
+  } catch (err) {
+    console.error("Logout error:", err);
+    // 网络错误时的处理，可以考虑强制跳转
+    // window.location.href = "/login";
   }
 };
 </script>

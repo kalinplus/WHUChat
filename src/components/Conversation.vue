@@ -241,7 +241,7 @@ const resetWebsocketTimeout = () => {
 const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
 
-// 设置WebSocket连接
+// 🔧 改进的 WebSocket onmessage 处理
 const setupWebSocket = (sessionId: number) => {
   // 关闭已存在的连接
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
@@ -253,9 +253,6 @@ const setupWebSocket = (sessionId: number) => {
       ? parseInt(currentModel.value.model_id as string, 10)
       : (currentModel.value.model_id as number);
 
-  // 创建新的WebSocket连接
-  // 参考 API 文档 /api/v1/ws/trans_ans 接口
-
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
@@ -265,19 +262,13 @@ const setupWebSocket = (sessionId: number) => {
   )}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
-
   ws.value = new WebSocket(wsUrl);
 
-  // 确保携带cookie (WebSocket默认会带上同源的cookie)
-  // 通过同源策略，应该不会有跨域问题，因为我们使用相同的host
-
-  // WebSocket事件处理
   ws.value.onopen = () => {
     wsConnected.value = true;
     console.log("WebSocket connected");
-    resetWebsocketTimeout(); // Start the timer when connection opens
+    resetWebsocketTimeout();
 
-    // 添加空的机器人消息... (rest of onopen)
     if (props.conversation.messages.length === 0) {
       props.conversation.messages.push({ id: null, is_bot: true, message: "" });
     } else if (
@@ -287,21 +278,19 @@ const setupWebSocket = (sessionId: number) => {
       props.conversation.messages.push({ id: null, is_bot: true, message: "" });
     }
 
-    // Add a hard timeout as a safety mechanism in case messages never complete
     const hardTimeout = setTimeout(() => {
       if (stateStore.fetchingResponse) {
         console.warn("Hard timeout reached - forcing connection closed");
         abortFetch(1001, "Response never completed");
         showSnackbar("总响应超时，已强制结束连接");
       }
-    }, 60000); // 60 seconds hard timeout
+    }, 60000);
 
-    // Clean up this timeout if websocket closes
     ws.value?.addEventListener("close", () => clearTimeout(hardTimeout));
   };
 
   ws.value.onmessage = (event) => {
-    resetWebsocketTimeout(); // Reset timer on any message received
+    resetWebsocketTimeout();
 
     const messageData =
       typeof event.data === "string" ? event.data : event.data.toString();
@@ -322,7 +311,6 @@ const setupWebSocket = (sessionId: number) => {
       if (props.conversation.messages.length > 0) {
         const lastMessage =
           props.conversation.messages[props.conversation.messages.length - 1];
-        // 确保是机器人消息且内容为空或仅包含空白字符
         if (
           lastMessage.is_bot &&
           (!lastMessage.message || lastMessage.message.trim() === "")
@@ -330,7 +318,6 @@ const setupWebSocket = (sessionId: number) => {
           isEmptyResponse = true;
         }
       } else {
-        // 如果消息列表为空，也视为空回复
         isEmptyResponse = true;
       }
 
@@ -338,7 +325,6 @@ const setupWebSocket = (sessionId: number) => {
         console.log(
           "Bot response is empty upon END_MARKER. Setting default message."
         );
-        // 获取或创建最后一条机器人消息以更新
         let targetMessage;
         if (
           props.conversation.messages.length > 0 &&
@@ -348,19 +334,17 @@ const setupWebSocket = (sessionId: number) => {
           targetMessage =
             props.conversation.messages[props.conversation.messages.length - 1];
         } else {
-          // 如果最后一条不是机器人消息或列表为空，则添加新的机器人消息
           const newBotMessage = {
             id: null,
             is_bot: true,
-            message: "", // 初始为空，下面会设置默认消息
-            message_type: "text", // 假设默认为文本类型
+            message: "",
+            message_type: "text",
           };
           props.conversation.messages.push(newBotMessage);
           targetMessage = newBotMessage;
         }
         targetMessage.message = t("emptyResponseFromServer");
 
-        // 使用 nextTick 确保 UI 更新
         nextTick(() => {
           scrollChatWindow();
         });
@@ -372,10 +356,16 @@ const setupWebSocket = (sessionId: number) => {
       }
       isProcessingQueue = false;
 
-      // Close normally, abortFetch will clear the timer
+      // 🔧 关键改进：消息接收完成后，处理新会话的后续操作
+      nextTick(async () => {
+        await handleMessageComplete();
+        // 在所有操作完成后滚动到底部
+        scrollChatWindow();
+      });
+
+      // Close normally
       abortFetch(1000, "Client received end marker");
     } else {
-      // 🔧 只处理非空消息
       if (messageData && messageData.trim() !== "") {
         messageQueue.push(messageData);
         processMessageQueue();
@@ -386,25 +376,23 @@ const setupWebSocket = (sessionId: number) => {
     }
   };
 
+  // 🔧 改进的错误和关闭处理
   ws.value.onerror = (error) => {
     console.error("WebSocket onerror event:", error);
-
-    // 🔧 立即清理所有状态
     clearTypewriter();
     stateStore.fetchingResponse = false;
     clearWebsocketTimeout();
     wsConnected.value = false;
 
-    // 清空消息队列
     while (messageQueue.length > 0) {
       messageQueue.shift();
     }
     isProcessingQueue = false;
 
-    console.error("WebSocket error:", error);
+    // 🔧 清理新会话数据
+    clearNewSessionData();
 
-    // 不要在这里显示错误，等待 onclose 事件处理
-    // showSnackbar("WebSocket connection error");
+    console.error("WebSocket error:", error);
   };
 
   ws.value.onclose = (event) => {
@@ -412,19 +400,19 @@ const setupWebSocket = (sessionId: number) => {
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
     );
 
-    // 🔧 确保状态被重置
     clearTypewriter();
     stateStore.fetchingResponse = false;
     clearWebsocketTimeout();
     wsConnected.value = false;
 
-    // 清空消息队列
     while (messageQueue.length > 0) {
       messageQueue.shift();
     }
     isProcessingQueue = false;
 
-    // 清除 WebSocket 引用
+    // 🔧 清理新会话数据
+    clearNewSessionData();
+
     ws.value = null;
 
     console.log(
@@ -432,7 +420,6 @@ const setupWebSocket = (sessionId: number) => {
     );
 
     if (event.code !== 1000) {
-      // Avoid showing "unexpectedly closed" if it was due to timeout (code 1001)
       if (event.code !== 1001 || event.reason !== "WebSocket timeout") {
         showSnackbar(
           `Connection closed unexpectedly (${event.code}). Please try again.`
@@ -446,27 +433,24 @@ const setupWebSocket = (sessionId: number) => {
 let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
 
+// 🔧 改进的 abortFetch 函数
 const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
 ) => {
   console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`);
 
-  // 🔧 立即清除所有相关状态
   clearTypewriter();
 
-  // 清空消息队列
   while (messageQueue.length > 0) {
     messageQueue.shift();
   }
   isProcessingQueue = false;
 
-  // 🔧 强制重置加载状态，确保UI更新
   if (stateStore.fetchingResponse) {
     stateStore.fetchingResponse = false;
     console.log("fetchingResponse set to false by abortFetch");
 
-    // 🔧 使用 nextTick 确保状态更新被应用
     nextTick(() => {
       console.log(
         "fetchingResponse state after nextTick:",
@@ -474,6 +458,9 @@ const abortFetch = (
       );
     });
   }
+
+  // 🔧 清理新会话数据
+  clearNewSessionData();
 
   clearWebsocketTimeout();
 
@@ -504,14 +491,37 @@ const abortFetch = (
     console.log("WebSocket instance is null in abortFetch");
   }
 
-  // 🔧 确保 WebSocket 引用被清除
   if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
     ws.value = null;
     wsConnected.value = false;
   }
 };
 
+// 🔧 新增：用于管理新会话的状态
+const newSessionData = ref<{
+  sessionId: number | null;
+  title: string | null;
+  needsRouteUpdate: boolean;
+  needsTitleUpdate: boolean;
+}>({
+  sessionId: null,
+  title: null,
+  needsRouteUpdate: false,
+  needsTitleUpdate: false,
+});
+
+// 清除新会话数据
+const clearNewSessionData = () => {
+  newSessionData.value = {
+    sessionId: null,
+    title: null,
+    needsRouteUpdate: false,
+    needsTitleUpdate: false,
+  };
+};
+
 // 发送对话，获取请求
+// 🔧 改进的 fetchReply 函数
 const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
@@ -525,10 +535,11 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   if (!Array.isArray(message)) {
     message = [message];
   }
+
   // 格式化用户消息为接口需要的格式
   const formattedPrompt: PromptArrayItem[] = message.map(
     (m: PromptArrayItem) => ({
-      type: m.type === "image" ? "image" : "text", // 默认为text类型
+      type: m.type === "image" ? "image" : "text",
       text: m.text,
     })
   );
@@ -538,19 +549,17 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       ? parseInt(currentModel.value.model_id as string, 10)
       : (currentModel.value.model_id as number);
 
-  // 检查模型ID是否有效
   if (isNaN(modelId)) {
     console.error("Invalid model ID:", currentModel.value.model_id);
     showSnackbar("模型ID无效，请在设置中选择有效的模型");
     return;
   }
 
-  // 使用转换后的modelId构建请求数据
   const requestData: ChatRequestData = {
     uuid: stateStore.user?.id || 1,
     session_id: props.conversation.id || null,
     sender: "user",
-    model_id: modelId, // 使用转换后的modelId
+    model_id: modelId,
     prompt: formattedPrompt,
     parameters: {
       temperature: 0.7,
@@ -571,13 +580,11 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     ")"
   );
 
-  // 添加API密钥（如果设置了）
   if (currentModel.value.api_key) {
     requestData.api_key = currentModel.value.api_key;
     console.log("Using model-specific API key");
   }
 
-  // 添加自定义URL（如果设置了）
   if (currentModel.value.custom_url) {
     requestData.URL = currentModel.value.custom_url;
     console.log("Using custom URL:", currentModel.value.custom_url);
@@ -586,7 +593,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   try {
     stateStore.fetchingResponse = true;
 
-    // 发送HTTP POST请求
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
       signal: ctrl.signal,
@@ -594,7 +600,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // 显式携带cookie
+      credentials: "include",
       body: JSON.stringify(requestData),
     });
 
@@ -604,7 +610,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
 
     const responseData = await response.json();
 
-    // 检查是否有错误
     if (responseData.error !== 0) {
       throw new Error(`API error: ${responseData.error}`);
     }
@@ -615,68 +620,134 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       fetchTimeout = null;
     }
 
-    // 准备接收消息 - 建立WebSocket连接
-    setupWebSocket(responseData.session_id || props.conversation.id);
+    // 🔧 关键改进：如果是新对话，先保存会话信息，但不立即更新路由和标题
+    const isNewConversation = !props.conversation.id && responseData.session_id;
 
-    // 如果是新对话，更新对话ID
-    if (!props.conversation.id && responseData.session_id) {
+    if (isNewConversation) {
+      // 立即更新 conversation ID，这样 WebSocket 可以正确连接
       props.conversation.id = responseData.session_id;
 
-      // 路由跳转
-      router.push(`/${requestData.uuid}/${responseData.session_id}`);
+      // 🔧 保存新会话数据，等待消息接收完成后处理
+      newSessionData.value = {
+        sessionId: responseData.session_id,
+        title: formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat"),
+        needsRouteUpdate: true,
+        needsTitleUpdate: true,
+      };
 
-      const newTitle =
-        formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat");
-      // 更新标题
-      try {
-        const updateTitleRequestData = {
-          new_title: newTitle,
-          uuid: stateStore.user?.id || 1,
-          session_id: responseData.session_id,
-        };
-
-        console.log("Updating title with data:", updateTitleRequestData);
-        // 假设API端点位于/api/v1/
-        const updateTitleResponse = await fetch(
-          `${baseUrl}/api/v1/chat/update_title`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify(updateTitleRequestData),
-          }
-        );
-
-        if (!updateTitleResponse.ok) {
-          const errorText = await updateTitleResponse.text();
-          console.error(
-            `Failed to update title: HTTP ${updateTitleResponse.status}. Response: ${errorText}`
-          );
-        } else {
-          const updateTitleResponseData = await updateTitleResponse.json();
-          if (updateTitleResponseData.error !== 0) {
-            console.error(
-              `Failed to update title: API error code ${updateTitleResponseData.error}, Message: ${updateTitleResponseData.message}`
-            );
-          } else {
-            console.log("Conversation title updated successfully via API.");
-            // 更新本地会话标题以提供即时UI反馈
-            if (props.conversation && typeof props.conversation === "object") {
-              (props.conversation as any).title = newTitle;
-            }
-          }
-        }
-      } catch (titleError) {
-        console.error("Error sending update_title request:", titleError);
-      }
+      console.log(
+        "New session created, data saved for post-processing:",
+        newSessionData.value
+      );
     }
+
+    // 建立WebSocket连接
+    setupWebSocket(responseData.session_id || props.conversation.id);
   } catch (err: any) {
     stateStore.fetchingResponse = false;
     console.error(err);
+    clearNewSessionData(); // 清理新会话数据
     abortFetch();
     showSnackbar(err.message);
+  }
+};
+
+// 🔧 新增：消息接收完成后的处理函数
+const handleMessageComplete = async () => {
+  console.log("Message complete, checking for post-processing...");
+
+  // 检查是否有待处理的新会话操作
+  if (
+    newSessionData.value.sessionId &&
+    (newSessionData.value.needsRouteUpdate ||
+      newSessionData.value.needsTitleUpdate)
+  ) {
+    console.log("Processing new session post-operations...");
+
+    try {
+      // 🔧 1. 首先处理路由跳转
+      if (newSessionData.value.needsRouteUpdate) {
+        console.log("Updating route to new session...");
+        await router.push(
+          `/${stateStore.user?.id || 1}/${newSessionData.value.sessionId}`
+        );
+
+        // 等待路由跳转完成
+        await nextTick();
+        console.log("Route update completed");
+      }
+
+      // 🔧 2. 然后异步更新标题（不阻塞主流程）
+      if (newSessionData.value.needsTitleUpdate && newSessionData.value.title) {
+        console.log("Starting title update...");
+        updateConversationTitleAsync(
+          newSessionData.value.sessionId,
+          newSessionData.value.title
+        );
+      }
+    } catch (error) {
+      console.error("Error in post-message processing:", error);
+      // 即使出错，也不影响聊天功能
+    } finally {
+      // 清理新会话数据
+      clearNewSessionData();
+    }
+  }
+};
+
+// 🔧 新增：异步标题更新函数
+const updateConversationTitleAsync = async (
+  sessionId: number,
+  title: string
+) => {
+  try {
+    const updateTitleRequestData = {
+      new_title: title,
+      uuid: stateStore.user?.id || 1,
+      session_id: sessionId,
+    };
+
+    console.log("Updating title with data:", updateTitleRequestData);
+
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const updateTitleResponse = await fetch(
+      `${baseUrl}/api/v1/chat/update_title`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(updateTitleRequestData),
+      }
+    );
+
+    if (!updateTitleResponse.ok) {
+      const errorText = await updateTitleResponse.text();
+      console.error(
+        `Failed to update title: HTTP ${updateTitleResponse.status}. Response: ${errorText}`
+      );
+      return;
+    }
+
+    const updateTitleResponseData = await updateTitleResponse.json();
+    if (updateTitleResponseData.error !== 0) {
+      console.error(
+        `Failed to update title: API error code ${updateTitleResponseData.error}, Message: ${updateTitleResponseData.message}`
+      );
+      return;
+    }
+
+    console.log("Conversation title updated successfully via API.");
+
+    // 🔧 安全地更新本地标题
+    if (props.conversation && typeof props.conversation === "object") {
+      (props.conversation as any).title = title;
+      await nextTick(); // 确保 UI 更新
+    }
+  } catch (titleError) {
+    console.error("Error in async title update:", titleError);
+    // 标题更新失败不影响聊天功能
   }
 };
 
@@ -743,8 +814,6 @@ const showSnackbar = (text: string) => {
   snackbar.value = true;
 };
 
-
-
 const editor = ref<{
   refreshDocList: () => void;
   usePrompt: (prompt: any) => void;
@@ -767,10 +836,24 @@ const handleModelSelect = (model: any) => {
   showModelSelector.value = false;
 };
 
+// 🔧 组件卸载时的清理
 onUnmounted(() => {
+  console.log("Conversation component unmounting, cleaning up...");
+
+  clearNewSessionData();
+
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     ws.value.close();
   }
+
+  clearTypewriter();
+  clearWebsocketTimeout();
+  stateStore.fetchingResponse = false;
+
+  while (messageQueue.length > 0) {
+    messageQueue.shift();
+  }
+  isProcessingQueue = false;
 });
 
 /**
