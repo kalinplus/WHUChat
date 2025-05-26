@@ -1,6 +1,6 @@
 <route lang="yaml">
 meta:
-  requiresAuth: true
+  requiresAuth: false
 </route>
 
 <script setup lang="ts">
@@ -25,7 +25,7 @@ const conversation = ref<{
 }>(getDefaultConversationData());
 const routerParams = route.params as { id?: number };
 
-// 监听路由参数变化
+// 🔧 修改 watch 逻辑，处理未登录状态
 watch(
   () => route.params,
   async (params) => {
@@ -37,6 +37,18 @@ watch(
     console.log(
       `Route params changed: user=${userId}, session_id=${sessionId}`
     );
+
+    // 🔧 检查用户是否登录
+    if (!stateStore.user) {
+      console.log("User not logged in, showing guest mode");
+      // 未登录时显示欢迎页面或访客模式
+      conversation.value = {
+        id: null,
+        messages: [],
+        loadingMessages: false,
+      };
+      return;
+    }
 
     if (sessionId) {
       // 有会话ID，加载特定会话
@@ -54,7 +66,7 @@ watch(
       };
     }
   },
-  { immediate: true } // 组件创建时立即执行一次
+  { immediate: true }
 );
 
 // TODO: 每个对话的标识url存在params的id里
@@ -130,28 +142,41 @@ const openSettings = () => {
 };
 
 // TODO: 退出登录，需要适配我们的接口和登录页面。注意 NavDrawer 里也有这个，可能重了
+// 🔧 修改退出登录逻辑
 const signOut = async () => {
   try {
-    // 调用退出登录API
-    const { data, error } = await useAuthFetch("/api/account/logout/", {
-      method: "POST",
-    });
+    // 如果用户已登录，调用退出API
+    if (stateStore.user) {
+      const { data, error } = await useAuthFetch("/api/account/logout/", {
+        method: "POST",
+      });
 
-    if (!error.value) {
-      // 清除用户状态
-      stateStore.setUser(null);
+      if (!error.value) {
+        console.log("Logout successful");
+      } else {
+        console.error("Logout failed:", error.value);
+      }
+    }
 
-      // 🔧 使用原生页面跳转到登录页
-      window.location.href = "/login";
-    } else {
-      console.error("Logout failed:", error.value);
-      // 即使API调用失败，也可以考虑强制跳转到登录页
-      // window.location.href = "/login";
+    // 清除用户状态
+    stateStore.setUser(null);
+
+    // 🔧 不跳转到登录页，而是重新加载当前页面或重置状态
+    // 重置会话状态，显示访客模式
+    conversation.value = {
+      id: null,
+      messages: [],
+      loadingMessages: false,
+    };
+
+    // 可选：跳转到首页
+    if (route.path !== "/chat") {
+      router.push("/chat");
     }
   } catch (err) {
     console.error("Logout error:", err);
-    // 网络错误时的处理，可以考虑强制跳转
-    // window.location.href = "/login";
+    // 即使出错也清除用户状态
+    stateStore.setUser(null);
   }
 };
 </script>
