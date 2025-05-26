@@ -52,7 +52,7 @@ router.beforeEach(async (to, from, next) => {
     if (!stateStore.user) {
       // 并且 Pinia store 中没有用户信息，尝试通过 cookie 恢复
       try {
-        const response = await fetch("/v1/gate/get_chatserver", {
+        const response = await fetch("/api/v1/gate/get_chatserver", {
           credentials: "include", // 确保 cookie 被发送
         });
 
@@ -74,7 +74,7 @@ router.beforeEach(async (to, from, next) => {
             );
             stateStore.setUser(null); // 清除可能存在的无效用户状态
             // 重定向到登录页, 并传递原始目标路径以便登录后跳转回来
-            next({ name: loginRouteName, query: { redirect: to.fullPath } });
+            // next({ name: loginRouteName, query: { redirect: to.fullPath } });
           }
         } else {
           // HTTP 请求失败 (例如 401 未授权)
@@ -101,7 +101,7 @@ router.beforeEach(async (to, from, next) => {
       next(defaultAuthenticatedRoute);
     } else {
       // 其他情况 (访问公共页面，或访问登录页但用户未登录)
-      next();
+      next(defaultAuthenticatedRoute);
     }
   }
 });
