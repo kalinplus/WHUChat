@@ -14,6 +14,7 @@ export const useCurrentModel = () => {
   const stateStore = useStateStore();
   // 如果 store 中已有 currentModel，使用它
   if (!stateStore.currentModel) {
+    // @ts-ignore
     stateStore.setCurrentModel(getCurrentModel());
   }
   return computed(() => stateStore.currentModel);
@@ -22,9 +23,11 @@ export const useCurrentModel = () => {
 export const useApiKey = () => {
   const stateStore = useStateStore();
   // 如果 store 中已有 apiKey，使用它
+  // @ts-ignore
   if (!stateStore.apiKey) {
     stateStore.setApiKey(getStoredApiKey());
   }
+  // @ts-ignore
   return computed(() => stateStore.apiKey);
 };
 

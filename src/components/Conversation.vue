@@ -17,7 +17,6 @@ import type {
 import axios from "axios";
 import { useChatSettingsManager } from "@/stores/settings";
 
-
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
 const stateStore = useStateStore();
@@ -29,8 +28,6 @@ const START_MARKER = "\u001C\u001C\u001C";
 // 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
 const END_MARKER = "\u001C\u200C\u001C";
 const router = useRouter();
-
-
 
 interface Settings {
   enableWebSearch: boolean;
@@ -45,20 +42,20 @@ let isProcessingQueue = false;
 // 1. 添加保存设置的函数
 const loadSavedSettings = () => {
   try {
-    const savedSettings = localStorage.getItem('chatSettings');
+    const savedSettings = localStorage.getItem("chatSettings");
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
       return {
         enableWebSearch: parsed.enableWebSearch ?? true,
-        frugalMode: parsed.frugalMode ?? false
+        frugalMode: parsed.frugalMode ?? false,
       };
     }
   } catch (e) {
-    console.error('Failed to load saved settings:', e);
+    console.error("Failed to load saved settings:", e);
   }
   return {
     enableWebSearch: true,
-    frugalMode: false
+    frugalMode: false,
   };
 };
 
@@ -68,12 +65,15 @@ const savedSettings = loadSavedSettings();
 // 2. 添加保存设置的函数
 const saveSettings = () => {
   try {
-    localStorage.setItem('chatSettings', JSON.stringify({
-      enableWebSearch: enableWebSearch.value,
-      frugalMode: frugalMode.value
-    }));
+    localStorage.setItem(
+      "chatSettings",
+      JSON.stringify({
+        enableWebSearch: enableWebSearch.value,
+        frugalMode: frugalMode.value,
+      })
+    );
   } catch (e) {
-    console.error('Failed to save settings:', e);
+    console.error("Failed to save settings:", e);
   }
 };
 
@@ -92,12 +92,16 @@ const toggleWebSearch = () => {
 };
 
 // 4. 保持与 settings 对象的同步
-watch([enableWebSearch, frugalMode], ([newEnableWebSearch, newFrugalMode]) => {
-  settings.value = {
-    enableWebSearch: newEnableWebSearch,
-    frugalMode: newFrugalMode
-  };
-}, { immediate: true });
+watch(
+  [enableWebSearch, frugalMode],
+  ([newEnableWebSearch, newFrugalMode]) => {
+    settings.value = {
+      enableWebSearch: newEnableWebSearch,
+      frugalMode: newFrugalMode,
+    };
+  },
+  { immediate: true }
+);
 
 const props = defineProps({
   conversation: {
@@ -143,6 +147,13 @@ const processMessageQueue = () => {
       ? nextMessage
       : nextMessage?.toString() || "";
 
+  // 🔧 修复：检查消息文本是否为空
+  if (!messageText || messageText.trim() === "") {
+    console.log("Empty message in queue, skipping...");
+    isProcessingQueue = false;
+    processMessageQueue(); // 继续处理队列中的下一条消息
+    return;
+  }
   // 打字机效果
   if (typewriter && messageText.length > 0) {
     let wordIndex = 0;
@@ -237,9 +248,10 @@ const setupWebSocket = (sessionId: number) => {
     ws.value.close();
   }
 
-  const modelId = typeof currentModel.value.model_id === 'string' 
-    ? parseInt(currentModel.value.model_id as string, 10) 
-    : (currentModel.value.model_id as number);
+  const modelId =
+    typeof currentModel.value.model_id === "string"
+      ? parseInt(currentModel.value.model_id as string, 10)
+      : (currentModel.value.model_id as number);
 
   // 创建新的WebSocket连接
   // 参考 API 文档 /api/v1/ws/trans_ans 接口
@@ -298,8 +310,12 @@ const setupWebSocket = (sessionId: number) => {
     if (messageData === START_MARKER) {
       console.log("Received start marker.");
     } else if (messageData === END_MARKER) {
-      stateStore.fetchingResponse = false;
       console.log("Received end marker.");
+
+      // 🔧 立即设置状态并清理资源
+      stateStore.fetchingResponse = false;
+      clearTypewriter();
+      clearWebsocketTimeout();
 
       // 检查最后一条消息（应该是机器人的回复）是否为空
       let isEmptyResponse = false;
@@ -350,38 +366,67 @@ const setupWebSocket = (sessionId: number) => {
         });
       }
 
+      // 🔧 清空消息队列
+      while (messageQueue.length > 0) {
+        messageQueue.shift();
+      }
+      isProcessingQueue = false;
+
       // Close normally, abortFetch will clear the timer
       abortFetch(1000, "Client received end marker");
     } else {
-      messageQueue.push(messageData);
-      processMessageQueue();
-      scrollChatWindow();
+      // 🔧 只处理非空消息
+      if (messageData && messageData.trim() !== "") {
+        messageQueue.push(messageData);
+        processMessageQueue();
+        scrollChatWindow();
+      } else {
+        console.log("Received empty message data, skipping...");
+      }
     }
   };
 
   ws.value.onerror = (error) => {
     console.error("WebSocket onerror event:", error);
-    clearTypewriter(); // 确保打字机也在这里被清理
-    if (stateStore.fetchingResponse) {
-      // 再次确认
-      stateStore.fetchingResponse = false;
-      console.log("fetchingResponse set to false by ws.onerror");
-    }
-    clearWebsocketTimeout(); // Clear timer on error
-    console.error("WebSocket error:", error);
+
+    // 🔧 立即清理所有状态
+    clearTypewriter();
+    stateStore.fetchingResponse = false;
+    clearWebsocketTimeout();
     wsConnected.value = false;
-    showSnackbar("WebSocket connection error");
-    // abortFetch(1006, "WebSocket error occurred");
+
+    // 清空消息队列
+    while (messageQueue.length > 0) {
+      messageQueue.shift();
+    }
+    isProcessingQueue = false;
+
+    console.error("WebSocket error:", error);
+
+    // 不要在这里显示错误，等待 onclose 事件处理
+    // showSnackbar("WebSocket connection error");
   };
 
   ws.value.onclose = (event) => {
     console.log(
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
     );
+
+    // 🔧 确保状态被重置
     clearTypewriter();
     stateStore.fetchingResponse = false;
-    clearWebsocketTimeout(); // Clear timer on close
+    clearWebsocketTimeout();
     wsConnected.value = false;
+
+    // 清空消息队列
+    while (messageQueue.length > 0) {
+      messageQueue.shift();
+    }
+    isProcessingQueue = false;
+
+    // 清除 WebSocket 引用
+    ws.value = null;
+
     console.log(
       `WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`
     );
@@ -405,15 +450,33 @@ const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
 ) => {
-  clearTypewriter();
-  console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`); // 增加日志
+  console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`);
 
-  // 立即尝试重置加载状态
+  // 🔧 立即清除所有相关状态
+  clearTypewriter();
+
+  // 清空消息队列
+  while (messageQueue.length > 0) {
+    messageQueue.shift();
+  }
+  isProcessingQueue = false;
+
+  // 🔧 强制重置加载状态，确保UI更新
   if (stateStore.fetchingResponse) {
     stateStore.fetchingResponse = false;
     console.log("fetchingResponse set to false by abortFetch");
+
+    // 🔧 使用 nextTick 确保状态更新被应用
+    nextTick(() => {
+      console.log(
+        "fetchingResponse state after nextTick:",
+        stateStore.fetchingResponse
+      );
+    });
   }
+
   clearWebsocketTimeout();
+
   if (fetchTimeout) {
     clearTimeout(fetchTimeout);
     fetchTimeout = null;
@@ -440,6 +503,12 @@ const abortFetch = (
   } else {
     console.log("WebSocket instance is null in abortFetch");
   }
+
+  // 🔧 确保 WebSocket 引用被清除
+  if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
+    ws.value = null;
+    wsConnected.value = false;
+  }
 };
 
 // 发送对话，获取请求
@@ -464,9 +533,10 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     })
   );
 
-  const modelId = typeof currentModel.value.model_id === 'string' 
-    ? parseInt(currentModel.value.model_id as string, 10) 
-    : (currentModel.value.model_id as number);
+  const modelId =
+    typeof currentModel.value.model_id === "string"
+      ? parseInt(currentModel.value.model_id as string, 10)
+      : (currentModel.value.model_id as number);
 
   // 检查模型ID是否有效
   if (isNaN(modelId)) {
@@ -493,7 +563,13 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     } as ChatParameters,
   };
 
-  console.log("Sending chat request with model:", currentModel.value.name, "(ID:", requestData.model_id, ")");
+  console.log(
+    "Sending chat request with model:",
+    currentModel.value.name,
+    "(ID:",
+    requestData.model_id,
+    ")"
+  );
 
   // 添加API密钥（如果设置了）
   if (currentModel.value.api_key) {
@@ -604,7 +680,6 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 };
 
-
 // 自动滚动聊天窗口
 const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;
@@ -640,17 +715,26 @@ const send = (message: any) => {
   scrollChatWindow();
 };
 const stop = () => {
-  clearTypewriter();
-  stateStore.fetchingResponse = false;
-  abortFetch(1000, "User manually canceled");
+  console.log("Stop function called");
 
+  // 立即重置状态
+  stateStore.fetchingResponse = false;
+
+  // 清除打字机效果
+  clearTypewriter();
+
+  // 清空消息队列
   while (messageQueue.length > 0) {
     messageQueue.shift();
   }
   isProcessingQueue = false;
 
+  // 关闭连接
+  abortFetch(1000, "User manually canceled");
+
   showSnackbar("回答已取消");
 };
+
 // 提示条
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -658,6 +742,8 @@ const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
 };
+
+
 
 const editor = ref<{
   refreshDocList: () => void;
@@ -998,9 +1084,7 @@ const hasMessages = computed(
             </v-btn>
 
             <!-- 节俭模式按钮 -->
-            <div
-              class="d-flex align-center"
-            >
+            <div class="d-flex align-center">
               <v-btn
                 :color="frugalMode ? 'primary' : ''"
                 variant="outlined"
