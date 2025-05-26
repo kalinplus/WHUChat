@@ -14,7 +14,7 @@ import { fileURLToPath, URL } from "node:url";
 
 // https://vitejs.dev/config/
 export default defineConfig({
- base: "/login/",
+  base: "/login/",
   plugins: [
     VueRouter({
       dts: "src/typed-router.d.ts",
@@ -71,7 +71,6 @@ export default defineConfig({
       key: fs.readFileSync("src/server/server.key"),
       cert: fs.readFileSync("src/server/server.crt"),
     },
-
   },
   css: {
     preprocessorOptions: {
@@ -80,16 +79,4 @@ export default defineConfig({
       },
     },
   },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    sourcemap: false,
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
-  },
-
 });
