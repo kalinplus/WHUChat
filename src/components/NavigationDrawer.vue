@@ -90,7 +90,10 @@ const editConversation = (index: number) => {
 const updateConversation = async (index: number) => {
   // editingConversation.value 是 conversations.value[index] 的引用
   // editingConversation.value.topic 已经通过 v-model 更新为输入框中的新标题
-  if (!editingConversation.value || typeof editingConversation.value.id === 'undefined') {
+  if (
+    !editingConversation.value ||
+    typeof editingConversation.value.id === "undefined"
+  ) {
     console.error("要编辑的会话或其ID未定义。");
     editingConversation.value = null; // 退出编辑模式
     return;
@@ -127,15 +130,13 @@ const updateConversation = async (index: number) => {
     } else {
       // API 调用失败
       console.error("通过API更新会话标题失败:", error.value);
-      showSnackbar(
-        t("titleUpdateError")
-      );
+      showSnackbar(t("titleUpdateError"));
     }
   } catch (e: any) {
     // 捕获 useAuthFetch 或其他代码可能抛出的异常
     console.error("updateConversation API调用期间发生异常:", e);
     showSnackbar(
-      t("titleUpdateError", `标题更新异常: ${e.message || '发生异常'}`)
+      t("titleUpdateError", `标题更新异常: ${e.message || "发生异常"}`)
     );
   } finally {
     // 无论成功或失败，都重置更新状态并退出编辑模式
@@ -193,8 +194,8 @@ const createNewConversation = () => {
   }
 
   // 如果不在回答中，则正常创建新会话
-  if (route.path !== "/") {
-    router.push("/");
+  if (route.path !== "/chat") {
+    router.push("/chat");
   }
   // 如果已经在主页面，只关闭抽屉
   drawer.value = false;
