@@ -51,12 +51,13 @@
 
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
-
+import type { UserProfile } from "@/stores/states";
+import { usePrevious } from "@vueuse/core";
 const { t } = useI18n();
 
 defineProps({
   user: {
-    type: Object,
+    type: Object as PropType<UserProfile | null>,
     default: null,
   },
   size: {

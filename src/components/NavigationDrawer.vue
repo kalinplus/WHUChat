@@ -104,7 +104,7 @@ const updateConversation = async (index: number) => {
 
   const newTitle = editingConversation.value.topic; // 从编辑对象中获取新标题
   const sessionId = editingConversation.value.id;
-  const userId = stateStore.user?.id || 1; // 从 stateStore 获取用户ID，如果未登录则默认为1
+  const userId = stateStore.user?.uuid || 1; // 从 stateStore 获取用户ID，如果未登录则默认为1
 
   try {
     const { data, error } = await useAuthFetch(
@@ -315,7 +315,7 @@ const loadConversations = async () => {
     const response = await axios.post(
       `${baseUrl}/api/v1/chat/history`,
       // TODO: uuid 要和登录注册联动好，现在 1 是测试
-      { uuid: stateStore.user?.id || 1 },
+      { uuid: stateStore.user?.uuid || 1 },
       {
         headers: {
           "Content-Type": "application/json",
@@ -466,7 +466,7 @@ const settingDialog = ref(false);
               base-color="primary"
               :to="
                 conversation.id
-                  ? `/${stateStore.user?.id || 0}/${conversation.id}`
+                  ? `/${stateStore.user?.uuid || 0}/${conversation.id}`
                   : '/'
               "
               v-bind="props"

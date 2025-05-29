@@ -14,13 +14,23 @@ interface ModelConfig {
   usable?: boolean;
 }
 
+export interface UserProfile {
+  uuid: number;
+  username: string;
+  email?: string; // 可选
+  avatar_url?: string; // 可选，头像链接
+  // 其他您可能需要的用户信息，例如：
+  // nickname?: string;
+  // roles?: string[];
+  // preferences?: Record<string, any>;
+}
 
 export const useStateStore = defineStore("stateStore", {
   state: () => ({
-    currentModel: getCurrentModel() as ModelConfig, 
+    currentModel: getCurrentModel() as ModelConfig,
     modelConfigs: {} as Record<string, ModelConfig>, // 存储每个模型的配置，包括API Key
     conversations: [] as any[],
-    user: null as any,
+    user: null as UserProfile | null,
     drawer: false,
     fetchingResponse: false,
   }),
@@ -32,7 +42,7 @@ export const useStateStore = defineStore("stateStore", {
         model_id: model.model_id || model.id,
         model_class: model.model_class || "anthropic",
       };
-      
+
       // 保存到本地存储
       localStorage.setItem("currentModel", JSON.stringify(this.currentModel));
     },
@@ -43,13 +53,13 @@ export const useStateStore = defineStore("stateStore", {
           ...this.getModelById(modelId),
           api_key: ''
         };
-        
+
         modelConfig.api_key = key;
         this.modelConfigs[modelId] = modelConfig;
-        
+
         // 保存所有模型配置到本地存储
         localStorage.setItem("modelConfigs", JSON.stringify(this.modelConfigs));
-        
+
         // 如果当前模型是被修改的模型，也更新currentModel
         if (this.currentModel && this.currentModel.id === modelId) {
           this.currentModel.api_key = key;
@@ -63,13 +73,13 @@ export const useStateStore = defineStore("stateStore", {
         ...this.getModelById(modelId),
         custom_url: ''
       };
-      
+
       modelConfig.custom_url = url;
       this.modelConfigs[modelId] = modelConfig;
-      
+
       // 保存所有模型配置到本地存储
       localStorage.setItem("modelConfigs", JSON.stringify(this.modelConfigs));
-      
+
       // 如果当前模型是被修改的模型，也更新currentModel
       if (this.currentModel && this.currentModel.id === modelId) {
         this.currentModel.custom_url = url;
@@ -101,7 +111,7 @@ export const useStateStore = defineStore("stateStore", {
     addConversation(conversation: any) {
       this.conversations.push(conversation);
     },
-    setUser(user: any) {
+    setUser(user: UserProfile) {
       this.user = user;
     },
     toggleDrawer() {

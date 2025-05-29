@@ -256,7 +256,7 @@ const setupWebSocket = (sessionId: number) => {
   const wsUrl = `wss://${
     import.meta.env.VITE_API_HOST
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
-    stateStore.user?.id || 1
+    stateStore.user?.uuid || 1
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     modelId
   )}`;
@@ -556,7 +556,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.id || 1,
+    uuid: stateStore.user?.uuid || 1,
     session_id: props.conversation.id || null,
     sender: "user",
     model_id: modelId,
@@ -669,7 +669,7 @@ const handleMessageComplete = async () => {
       if (newSessionData.value.needsRouteUpdate) {
         console.log("Updating route to new session...");
         await router.push(
-          `/${stateStore.user?.id || 1}/${newSessionData.value.sessionId}`
+          `/${stateStore.user?.uuid || 1}/${newSessionData.value.sessionId}`
         );
 
         // 等待路由跳转完成
@@ -703,7 +703,7 @@ const updateConversationTitleAsync = async (
   try {
     const updateTitleRequestData = {
       new_title: title,
-      uuid: stateStore.user?.id || 1,
+      uuid: stateStore.user?.uuid || 1,
       session_id: sessionId,
     };
 
@@ -882,7 +882,7 @@ const loadConversationHistory = async () => {
 
     // TODO: uuid 这里要用正常逻辑，不能硬编码
     const requestData = {
-      uuid: stateStore.user.id || 1,
+      uuid: stateStore.user?.uuid || 1,
       session_id: props.conversation.id,
     };
 
