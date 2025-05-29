@@ -20,6 +20,7 @@ import { useChatSettingsManager } from "@/stores/settings";
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
 const stateStore = useStateStore();
+// @ts-ignore
 const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
@@ -882,7 +883,7 @@ const loadConversationHistory = async () => {
 
     // TODO: uuid 这里要用正常逻辑，不能硬编码
     const requestData = {
-      uuid: 1 || stateStore.user.id,
+      uuid: stateStore.user.id || 1,
       session_id: props.conversation.id,
     };
 
