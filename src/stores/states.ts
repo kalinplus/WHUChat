@@ -111,7 +111,7 @@ export const useStateStore = defineStore("stateStore", {
     addConversation(conversation: any) {
       this.conversations.push(conversation);
     },
-    setUser(user: UserProfile) {
+    setUser(user: UserProfile | null) {
       this.user = user;
     },
     toggleDrawer() {

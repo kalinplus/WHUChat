@@ -30,7 +30,7 @@ watch(
   () => route.params,
   async (params) => {
     // @ts-ignore
-    const userId = params.user;
+    const userId = params.user.uuid;
     // @ts-ignore
     const sessionId = params.session_id;
 

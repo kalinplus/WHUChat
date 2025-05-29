@@ -70,7 +70,7 @@
               </v-snackbar>
             </v-list-item-subtitle>
           </v-list-item>
-          
+
           <!-- 模型特定API设置 -->
           <v-list-item v-if="selectedModel">
             <template #prepend>
@@ -86,7 +86,7 @@
                 class="mt-2 mb-3"
                 variant="outlined"
               ></v-text-field>
-              
+
               <v-text-field
                 v-model="modelCustomUrl"
                 :label="$t('settings.customUrl') || 'Custom API URL'"
@@ -134,7 +134,7 @@
               ></v-select>
             </v-list-item-subtitle>
           </v-list-item>
-          
+
           <!-- 聊天设置 -->
           <v-list-item>
             <template #prepend>
@@ -161,7 +161,7 @@
           </v-list-item>
         </v-list>
       </v-card-text>
-      
+
       <!-- 添加保存按钮 -->
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -228,7 +228,7 @@ const frugalMode = ref(true);
 // 处理模型选择
 const handleModelSelect = (model: ModelConfig) => {
   selectedModel.value = model;
-  
+
   // 从模型配置中加载API Key
   const modelConfig = stateStore.modelConfigs?.[model.id];
   if (modelConfig) {
@@ -246,8 +246,8 @@ const fetchModels = async () => {
   loadingModels.value = true;
   try {
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.id || 1)}`;
-    
+    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.uuid || 1)}`;
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -255,17 +255,17 @@ const fetchModels = async () => {
       },
       credentials: 'include', // 携带cookie
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (data.error !== undefined && data.error !== 0) {
       throw new Error(`API error: ${data.error}`);
     }
-    
+
     // 处理返回的模型列表数据
     if (Array.isArray(data)) {
       // 将后端返回的模型数据映射为前端需要的格式
@@ -278,10 +278,10 @@ const fetchModels = async () => {
         model_class: getModelClass(model.model), // 根据模型名称推断class
         usable: model.usable, // 保存可用状态
       }));
-      
+
       console.log("Fetched models:", validatedModels);
       availableModels.value = validatedModels;
-      
+
       // 如果当前没有选择的模型，选择第一个可用的模型
       if (!selectedModel.value && validatedModels.length > 0) {
         const firstUsableModel = validatedModels.find(model => model.usable !== false);
@@ -305,7 +305,7 @@ const fetchModels = async () => {
 // 辅助函数：根据模型名称获取模型类
 function getModelClass(modelName: string): string {
   if (!modelName) return 'unknown';
-  
+
   const name = modelName.toLowerCase();
   if (name.includes('gpt')) return 'openai';
   if (name.includes('claude')) return 'anthropic';
@@ -317,7 +317,7 @@ function getModelClass(modelName: string): string {
 // 辅助函数：根据模型名称获取logo文件名
 function getLogo(modelName: string): string {
   if (!modelName) return 'unknown.png';
-  
+
   const name = modelName.toLowerCase();
   if (name.includes('gpt')) return 'openai.png';
   if (name.includes('claude')) return 'anthropic.png';
@@ -329,7 +329,7 @@ function getLogo(modelName: string): string {
 // 辅助函数：根据模型名称生成描述
 function getModelDescription(modelName: string): string {
   if (!modelName) return '';
-  
+
   const name = modelName.toLowerCase();
   if (name.includes('gpt-4')) return 'OpenAI GPT-4';
   if (name.includes('gpt-3.5')) return 'OpenAI GPT-3.5 Turbo';
@@ -356,27 +356,27 @@ const saveSettings = () => {
       api_key: modelApiKey.value,
       custom_url: modelCustomUrl.value
     };
-    
+
     // 更新状态中的当前模型
     stateStore.setCurrentModel(modelConfig);
-    
+
     // 保存模型特定的API密钥和URL
     if (!stateStore.modelConfigs) {
       stateStore.modelConfigs = {};
     }
-    
+
     stateStore.modelConfigs[modelConfig.id] = {
       ...modelConfig
     };
-    
+
     // 保存模型配置到localStorage
     localStorage.setItem("modelConfigs", JSON.stringify(stateStore.modelConfigs));
   }
-  
-  
+
+
   // 保存聊天设置
   updateChatSettings();
-  
+
   // 关闭对话框
   closeDialog();
 };
@@ -396,7 +396,7 @@ onMounted(() => {
   if (savedConfigs) {
     try {
       stateStore.modelConfigs = JSON.parse(savedConfigs);
-      
+
       // 如果当前有选中的模型，加载它的API密钥和URL
       if (selectedModel.value && stateStore.modelConfigs[selectedModel.value.id]) {
         const config = stateStore.modelConfigs[selectedModel.value.id];
@@ -410,7 +410,7 @@ onMounted(() => {
   } else {
     stateStore.modelConfigs = {};
   }
-  
+
   // 加载保存的聊天设置
   const savedSettings = localStorage.getItem('chatSettings');
   if (savedSettings) {
@@ -418,9 +418,9 @@ onMounted(() => {
     enableWebSearch.value = settings.enableWebSearch ?? true;
     frugalMode.value = settings.frugalMode ?? true;
   }
-  
+
   // 获取可用模型列表
-  fetchModels(); 
+  fetchModels();
 });
 </script>
 

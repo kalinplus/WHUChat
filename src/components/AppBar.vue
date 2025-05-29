@@ -53,6 +53,7 @@
 import { useI18n } from "vue-i18n";
 import { useStateStore } from "@/stores/states";
 import UserAvatar from "./UserAvatar.vue"; // 导入用户头像组件
+import type { UserProfile } from "@/stores/states";
 
 const { t } = useI18n();
 const stateStore = useStateStore();
@@ -64,7 +65,7 @@ const props = defineProps({
     default: "",
   },
   user: {
-    type: Object,
+    type: Object as PropType<UserProfile | null>,
     default: null,
   },
 });
