@@ -264,7 +264,7 @@ const setupWebSocket = (sessionId: number) => {
 
   console.log("Connecting to WebSocket:", wsUrl);
   ws.value = new WebSocket(wsUrl);
-
+  // 打开连接时
   ws.value.onopen = () => {
     wsConnected.value = true;
     console.log("WebSocket connected");
@@ -289,7 +289,7 @@ const setupWebSocket = (sessionId: number) => {
 
     ws.value?.addEventListener("close", () => clearTimeout(hardTimeout));
   };
-
+  // 接收消息时
   ws.value.onmessage = (event) => {
     resetWebsocketTimeout();
 
@@ -377,7 +377,7 @@ const setupWebSocket = (sessionId: number) => {
     }
   };
 
-  // 🔧 改进的错误和关闭处理
+  // 错误和关闭处理
   ws.value.onerror = (error) => {
     console.error("WebSocket onerror event:", error);
     clearTypewriter();
@@ -390,12 +390,11 @@ const setupWebSocket = (sessionId: number) => {
     }
     isProcessingQueue = false;
 
-    // 🔧 清理新会话数据
+    // 清理新会话数据
     clearNewSessionData();
 
     console.error("WebSocket error:", error);
   };
-
   ws.value.onclose = (event) => {
     console.log(
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
@@ -430,10 +429,9 @@ const setupWebSocket = (sessionId: number) => {
   };
 };
 
-// 修改终止函数，同时处理HTTP请求和WebSocket
+// 终止函数，同时处理HTTP请求和WebSocket
 let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
-
 const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
@@ -497,7 +495,7 @@ const abortFetch = (
   }
 };
 
-// 🔧 新增：用于管理新会话的状态
+// 用于管理新会话的状态
 const newSessionData = ref<{
   sessionId: number | null;
   title: string | null;
