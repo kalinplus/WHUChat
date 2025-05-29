@@ -35,53 +35,6 @@ interface Settings {
   frugalMode: boolean;
 }
 
-const ensureUserSession = async (): Promise<boolean> => {
-  if (stateStore.user?.uuid) {
-    return true; // 用户已存在，会话有效
-  }
-
-  console.log("User UUID not found in store, attempting to fetch session...");
-  try {
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    // 确保使用正确的 API 路径，如果后端直接暴露 /v1/gate/get_chatserver，则不需要 /api 前缀
-    const response = await fetch(`${baseUrl}/api/v1/gate/get_chatserver`, {
-      method: "GET",
-      credentials: "include", // 必须携带 cookie
-    });
-
-    if (!response.ok) {
-      console.error(
-        `Failed to fetch user session, HTTP status: ${response.status}`
-      );
-      return false;
-    }
-
-    const data = await response.json();
-
-    if (data.error === 0 && data.uuid) {
-      console.log("User session fetched successfully:", data);
-      stateStore.setUser({
-        uuid: data.uuid,
-        username: data.username,
-        addr: data.addr,
-        // email 和 avatar_url 根据实际 API 返回情况添加
-      } as UserProfile);
-      return true;
-    } else {
-      console.error(
-        "Failed to fetch user session, API error or no UUID:",
-        data.error
-      );
-      stateStore.setUser(null); // 清除可能存在的无效用户状态
-      return false;
-    }
-  } catch (error) {
-    console.error("Exception during user session fetch:", error);
-    stateStore.setUser(null);
-    return false;
-  }
-};
-
 const settings = ref<Settings>({
   enableWebSearch: true,
   frugalMode: true,
@@ -569,14 +522,6 @@ const clearNewSessionData = () => {
 
 // 发送对话，获取请求
 const fetchReply = async (message: PromptArrayItem[]) => {
-  // 在发送消息前确保用户会话存在
-  const sessionEnsured = await ensureUserSession();
-  if (!sessionEnsured || !stateStore.user?.uuid) {
-    console.error("User session could not be ensured. Aborting message send.");
-    showSnackbar(t("loginRequiredError"));
-    return;
-  }
-
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
@@ -610,7 +555,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 
   const requestData: ChatRequestData = {
-    uuid: stateStore.user.uuid || 1,
+    uuid: stateStore.user?.uuid || 1,
     session_id: props.conversation.id || null,
     sender: "user",
     model_id: modelId,
@@ -890,7 +835,7 @@ const handleModelSelect = (model: any) => {
   showModelSelector.value = false;
 };
 
-// 🔧 组件卸载时的清理
+// 组件卸载时的清理
 onUnmounted(() => {
   console.log("Conversation component unmounting, cleaning up...");
 
@@ -908,6 +853,69 @@ onUnmounted(() => {
     messageQueue.shift();
   }
   isProcessingQueue = false;
+});
+
+interface GetChatServer {
+  uuid: number;
+  username: string;
+  addr: string;
+  error: number;
+}
+
+onMounted(async () => {
+  let sessionEnsured: GetChatServer | null = null;
+
+  console.log("User UUID not found in store, attempting to fetch session...");
+  try {
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    const response = await fetch(`${baseUrl}/api/v1/gate/get_chatserver`, {
+      method: "GET",
+      credentials: "include", // 必须携带 cookie
+    });
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch user session, HTTP status: ${response.status}`
+      );
+      // sessionEnsured remains null
+    } else {
+      sessionEnsured = await response.json();
+
+      if (sessionEnsured?.error === 0 && sessionEnsured?.uuid) {
+        console.log("User session fetched successfully:", sessionEnsured);
+        stateStore.setUser({
+          uuid: sessionEnsured.uuid,
+          username: sessionEnsured.username,
+          // email 和 avatar_url 根据实际 API 返回情况添加
+        } as UserProfile);
+        stateStore.setAddr(sessionEnsured.addr);
+      } else {
+        console.error(
+          "Failed to fetch user session, API error or no UUID:",
+          sessionEnsured?.error
+        );
+        stateStore.setUser(null); // 清除可能存在的无效用户状态
+        // sessionEnsured remains null
+      }
+    }
+  } catch (error) {
+    console.error("Exception during user session fetch:", error);
+    stateStore.setUser(null);
+    // sessionEnsured remains null
+  }
+
+  // 在发送消息前确保用户会话存在
+  if (
+    !sessionEnsured ||
+    sessionEnsured?.error !== 0 ||
+    !stateStore.user?.uuid
+  ) {
+    console.error("User session could not be ensured. Aborting message send.");
+    showSnackbar(t("loginRequiredError"));
+    router.push("/login");
+  } else {
+    stateStore.addr = sessionEnsured.addr;
+  }
 });
 
 /**

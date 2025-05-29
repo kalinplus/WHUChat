@@ -19,10 +19,6 @@ export interface UserProfile {
   username: string;
   email?: string; // 可选
   avatar_url?: string; // 可选，头像链接
-  // 其他您可能需要的用户信息，例如：
-  // nickname?: string;
-  // roles?: string[];
-  // preferences?: Record<string, any>;
 }
 
 export const useStateStore = defineStore("stateStore", {
@@ -33,6 +29,7 @@ export const useStateStore = defineStore("stateStore", {
     user: null as UserProfile | null,
     drawer: false,
     fetchingResponse: false,
+    addr: null as string | null,
   }),
   actions: {
     setCurrentModel(model: ModelConfig) {
@@ -51,7 +48,7 @@ export const useStateStore = defineStore("stateStore", {
         // 如果指定了模型ID，则为该模型设置特定的API Key
         const modelConfig = this.modelConfigs[modelId] || {
           ...this.getModelById(modelId),
-          api_key: ''
+          api_key: "",
         };
 
         modelConfig.api_key = key;
@@ -63,7 +60,10 @@ export const useStateStore = defineStore("stateStore", {
         // 如果当前模型是被修改的模型，也更新currentModel
         if (this.currentModel && this.currentModel.id === modelId) {
           this.currentModel.api_key = key;
-          localStorage.setItem("currentModel", JSON.stringify(this.currentModel));
+          localStorage.setItem(
+            "currentModel",
+            JSON.stringify(this.currentModel)
+          );
         }
       }
     },
@@ -71,7 +71,7 @@ export const useStateStore = defineStore("stateStore", {
       // 为指定模型设置自定义URL
       const modelConfig = this.modelConfigs[modelId] || {
         ...this.getModelById(modelId),
-        custom_url: ''
+        custom_url: "",
       };
 
       modelConfig.custom_url = url;
@@ -106,7 +106,7 @@ export const useStateStore = defineStore("stateStore", {
     },
     getModelApiKey(modelId: string): string {
       // 获取指定模型的API Key，如果没有则返回默认API Key
-      return this.modelConfigs[modelId]?.api_key || '';
+      return this.modelConfigs[modelId]?.api_key || "";
     },
     addConversation(conversation: any) {
       this.conversations.push(conversation);
@@ -122,6 +122,12 @@ export const useStateStore = defineStore("stateStore", {
     },
     setConversations(conversations: any[]) {
       this.conversations = conversations;
+    },
+    getAddr() {
+      return this.addr;
+    },
+    setAddr(addr: string | null) {
+      this.addr = addr;
     },
   },
 });
