@@ -265,7 +265,7 @@ const handleModelSelect = (model: ModelConfig) => {
 const fetchModels = async () => {
   loadingModels.value = true;
   try {
-    const url = `/api/v1/chat/models`;
+    const url = `https://${stateStore.addr}/api/v1/chat/models`;
 
     const response = await fetch(url, {
       method: "GET",

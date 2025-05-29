@@ -108,7 +108,7 @@ const updateConversation = async (index: number) => {
 
   try {
     const { data, error } = await useAuthFetch(
-      `/api/v1/chat/update_title`, // 使用新的API端点
+      `https://${stateStore.addr}/api/v1/chat/update_title`, // 使用新的API端点
       {
         method: "POST", // 使用 POST 方法
         body: JSON.stringify({
@@ -312,7 +312,7 @@ const loadConversations = async () => {
     const token = getToken();
 
     const response = await axios.post(
-      `/api/v1/chat/history`,
+      `https://${stateStore.addr}/api/v1/chat/history`,
       // TODO: uuid 要和登录注册联动好，现在 1 是测试
       { uuid: stateStore.user?.uuid || 1 },
       {

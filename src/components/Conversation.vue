@@ -255,7 +255,7 @@ const setupWebSocket = (sessionId: number) => {
       ? parseInt(currentModel.value.model_id as string, 10)
       : (currentModel.value.model_id as number);
 
-  const wsUrl = `/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
+  const wsUrl = `wss://${stateStore.addr}/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
     stateStore.user?.uuid || 1
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     modelId
@@ -589,7 +589,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   try {
     stateStore.fetchingResponse = true;
 
-    const response = await fetch(`/api/v1/chat/send_message`, {
+    const response = await fetch(`https://${stateStore.addr}/api/v1/chat/send_message`, {
       signal: ctrl.signal,
       method: "POST",
       headers: {
@@ -704,7 +704,7 @@ const updateConversationTitleAsync = async (
 
     console.log("Updating title with data:", updateTitleRequestData);
 
-    const updateTitleResponse = await fetch(`/api/v1/chat/update_title`, {
+    const updateTitleResponse = await fetch(`https://${stateStore.addr}/api/v1/chat/update_title`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -940,7 +940,7 @@ const loadConversationHistory = async () => {
 
     // 使用axios发送请求获取历史消息
     const response = await axios.post(
-      `/api/v1/chat/browse_messages`,
+      `https://${stateStore.addr}/api/v1/chat/browse_messages`,
       requestData,
       {
         headers: {
