@@ -20,7 +20,7 @@
   "Password is required": "请填写密码",
   "Don't have an account?": "您还没有账号？",
   "Get VrfCode": "获取验证码",
-  "Forgot Password?" : "忘记密码？",
+  "Forgot Password?": "忘记密码？",
   "Please enter your username": "请输入你的用户名",
   "Username must be at least 4 characters": "用户名至少四个字符",
   "Already have an account?": "您已有账号？",
@@ -149,5 +149,6 @@
   "waitForResponseOrStop": "在新建会话前，请等待当前回答完成，或手动终止回答",
   "new Chat": "新对话",
   "titleUpdateError": "标题更新失败",
-  "emptyResponseFromServer": "服务器未返回有效内容"
+  "emptyResponseFromServer": "服务器未返回有效内容",
+  "loginRequiredError": "用户 id 无效，请先登录"
 }
