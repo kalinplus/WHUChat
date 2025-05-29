@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { getCurrentModel, getStoredApiKey } from "@/utils/localStorage";
+import { getCurrentModel, getStoredApiKey } from "../utils/localStorage";
 
 // 接口定义
 interface ModelConfig {

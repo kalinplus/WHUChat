@@ -5,7 +5,9 @@
     "vitest.config.*",
     "cypress.config.*",
     "nightwatch.conf.*",
-    "playwright.config.*"
+    "playwright.config.*",
+    "src/stores/states.ts",
+    "src/utils/localStorage.ts"
   ],
   "compilerOptions": {
     "composite": true,
