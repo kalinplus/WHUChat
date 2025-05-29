@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// @ts-nocheck
 import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
@@ -21,7 +20,6 @@ import { useChatSettingsManager } from "@/stores/settings";
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
 const stateStore = useStateStore();
-// @ts-ignore
 const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
