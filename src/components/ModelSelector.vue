@@ -17,7 +17,6 @@ interface ModelConfig {
   usable: boolean;
 }
 
-// 然后修改第25行
 const availableModels = ref<ModelConfig[]>([]);
 
 const props = defineProps({
@@ -41,8 +40,7 @@ const selectModel = (model: ModelConfig) => {
 const fetchModels = async () => {
   try {
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.id || 1)}`;
-    
+    const url = `${baseUrl}/api/v1/chat/models`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {
