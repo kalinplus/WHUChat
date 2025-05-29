@@ -18,6 +18,8 @@
   "Please enter the verification code": "请填写验证码",
   "Username is required": "请填写用户名",
   "Password is required": "请填写密码",
+  "Don't have an account?": "您还没有账号？",
+  "Get VrfCode": "获取验证码",
   "Please enter your username": "请输入你的用户名",
   "Username must be at least 4 characters": "用户名至少四个字符",
   "Please enter your e-mail address": "请输入你的电子邮箱",

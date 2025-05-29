@@ -15,7 +15,7 @@
         :class="{ active: isRegister }"
       >
         <div class="welcome-content">
-          <h1 class="welcome-title">{{ t("welcomeTo") }}WHUchat</h1>
+          <h1 class="welcome-title">{{ t("welcomeTo") }}WHUChat</h1>
           <p class="text-body-1 mb-8">
             {{
               isRegister
@@ -411,20 +411,13 @@ const handleLogin = async () => {
   }
 };
 const handleLoginSuccess = () => {
-  // 调试日志
-  const cookies = parseCookies();
-  console.log("Cookie:", cookies);
-
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
 
   // 检查重定向
   setTimeout(() => {
-    const path = window.location.pathname.toString();
-    if (path !== "/") {
-      router.push("/");
-    }
+    router.push("/chat");
   }, 1000);
 };
 //验证码逻辑
