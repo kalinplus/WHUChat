@@ -15,7 +15,7 @@
         :class="{ active: isRegister }"
       >
         <div class="welcome-content">
-          <h1 class="welcome-title">{{ t("welcomeTo") }}WHUchat</h1>
+          <h1 class="welcome-title">{{ t("welcomeTo") }}WHUChat</h1>
           <p class="text-body-1 mb-8">
             {{
               isRegister
@@ -71,13 +71,6 @@
               class="mb-2"
             />
 
-            <v-checkbox
-              v-model="checkbox"
-              :rules="[(v) => !!v || t('You must agree to continue')]"
-              :label="t('agreeToThePrivacyPolicyToRegisterOrLogIn')"
-              required
-            />
-
             <div class="text-right mb-4">
               <a class="forgot-link text-body-2" style="cursor: pointer">{{
                 t("Forgot Password?")
@@ -94,28 +87,14 @@
             >
               {{ t("clickToSignIn") }}
             </v-btn>
-
-            <v-divider class="my-6"></v-divider>
-
-            <p class="text-caption text-medium-emphasis text-center mb-4">
-              or login with social platforms
-            </p>
-
-            <div class="social-icons">
-              <v-btn
-                v-for="icon in socialIcons"
-                :key="icon"
-                variant="outlined"
-                color="grey-darken-2"
-                icon
-                size="small"
-              >
-                <v-icon :icon="icon" />
-              </v-btn>
-            </div>
           </v-form>
 
-          <v-form v-else key="register" class="login-form" ref="registerform">
+          <v-form
+            v-else
+            key="register"
+            class="register-form"
+            ref="registerform"
+          >
             <h1 class="text-h4 text-primary mb-8" style="text-align: center">
               {{ t("signUp") }}
             </h1>
@@ -411,20 +390,13 @@ const handleLogin = async () => {
   }
 };
 const handleLoginSuccess = () => {
-  // 调试日志
-  const cookies = parseCookies();
-  console.log("Cookie:", cookies);
-
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
 
   // 检查重定向
   setTimeout(() => {
-    const path = window.location.pathname.toString();
-    if (path !== "/") {
-      router.push("/");
-    }
+    router.push("/chat");
   }, 1000);
 };
 //验证码逻辑
@@ -539,14 +511,6 @@ const handleRegister = async () => {
     setTimeout(() => (showAlert.value = false), 1000);
   }
 };
-
-// 社交图标
-const socialIcons = [
-  "mdi-google",
-  "mdi-facebook",
-  "mdi-twitter",
-  "mdi-linkedin",
-];
 </script>
 
 <style scoped>
@@ -620,6 +584,10 @@ const socialIcons = [
 }
 
 .login-form {
+  max-width: 400px;
+  margin: 80px auto;
+}
+.register-form {
   max-width: 400px;
   margin: 0 auto;
 }

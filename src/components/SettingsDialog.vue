@@ -30,10 +30,19 @@
                     :loading="loadingModels"
                   >
                     <div class="d-flex align-center">
-                      <v-avatar size="24" class="mr-2" v-if="selectedModel && selectedModel.logo">
-                        <v-img :src="selectedModel.logo" alt="Model logo"></v-img>
+                      <v-avatar
+                        size="24"
+                        class="mr-2"
+                        v-if="selectedModel && selectedModel.logo"
+                      >
+                        <v-img
+                          :src="selectedModel.logo"
+                          alt="Model logo"
+                        ></v-img>
                       </v-avatar>
-                      <span>{{ selectedModel ? selectedModel.name : t("selectModel") }}</span>
+                      <span>{{
+                        selectedModel ? selectedModel.name : t("selectModel")
+                      }}</span>
                     </div>
                     <v-spacer></v-spacer>
                     <v-icon>mdi-chevron-down</v-icon>
@@ -53,8 +62,13 @@
                       </v-avatar>
                     </template>
                     <v-list-item-title>{{ model.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ model.description }}</v-list-item-subtitle>
-                    <v-list-item-subtitle v-if="model.usable === false" class="text-error">
+                    <v-list-item-subtitle>{{
+                      model.description
+                    }}</v-list-item-subtitle>
+                    <v-list-item-subtitle
+                      v-if="model.usable === false"
+                      class="text-error"
+                    >
                       不可用
                     </v-list-item-subtitle>
                   </v-list-item>
@@ -76,7 +90,10 @@
             <template #prepend>
               <v-icon>mdi-key</v-icon>
             </template>
-            <v-list-item-title>{{ selectedModel.name }} {{ $t("settings.api") }}</v-list-item-title>
+            <v-list-item-title
+              >{{ selectedModel.name }}
+              {{ $t("settings.api") }}</v-list-item-title
+            >
             <v-list-item-subtitle>
               <v-text-field
                 v-model="modelApiKey"
@@ -140,7 +157,9 @@
             <template #prepend>
               <v-icon>mdi-chat-settings</v-icon>
             </template>
-            <v-list-item-title>{{ $t("settings.chatSettings") }}</v-list-item-title>
+            <v-list-item-title>{{
+              $t("settings.chatSettings")
+            }}</v-list-item-title>
             <v-list-item-subtitle>
               <v-checkbox
                 v-model="enableWebSearch"
@@ -174,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch } from "vue";
 import { useThemeManager } from "@/stores/settings";
 import { useLanguageManager } from "@/stores/settings";
 import { useStateStore } from "@/stores/states";
@@ -205,7 +224,8 @@ const closeDialog = () => {
 defineExpose({ closeDialog });
 
 // 语言切换逻辑
-const { selectedLanguage, updateLanguage, languageOptions } = useLanguageManager();
+const { selectedLanguage, updateLanguage, languageOptions } =
+  useLanguageManager();
 
 // 主题切换逻辑
 const { selectedTheme, updateTheme } = useThemeManager();
@@ -218,8 +238,8 @@ const selectedModel = ref<ModelConfig | null>(stateStore.currentModel || null);
 const loadingModels = ref(false);
 
 // API 相关状态
-const modelApiKey = ref('');
-const modelCustomUrl = ref('');
+const modelApiKey = ref("");
+const modelCustomUrl = ref("");
 
 // 聊天设置
 const enableWebSearch = ref(true);
@@ -232,12 +252,12 @@ const handleModelSelect = (model: ModelConfig) => {
   // 从模型配置中加载API Key
   const modelConfig = stateStore.modelConfigs?.[model.id];
   if (modelConfig) {
-    modelApiKey.value = modelConfig.api_key || '';
-    modelCustomUrl.value = modelConfig.custom_url || '';
+    modelApiKey.value = modelConfig.api_key || "";
+    modelCustomUrl.value = modelConfig.custom_url || "";
   } else {
     // 如果没有特定配置，使用默认值
-    modelApiKey.value = '';
-    modelCustomUrl.value = '';
+    modelApiKey.value = "";
+    modelCustomUrl.value = "";
   }
 };
 
@@ -246,14 +266,14 @@ const fetchModels = async () => {
   loadingModels.value = true;
   try {
     const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/models?uuid=${encodeURIComponent(stateStore.user?.uuid || 1)}`;
+    const url = `${baseUrl}/api/v1/chat/models`;
 
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include', // 携带cookie
+      credentials: "include", // 携带cookie
     });
 
     if (!response.ok) {
@@ -269,9 +289,9 @@ const fetchModels = async () => {
     // 处理返回的模型列表数据
     if (Array.isArray(data)) {
       // 将后端返回的模型数据映射为前端需要的格式
-      const validatedModels: ModelConfig[] = data.map(model => ({
+      const validatedModels: ModelConfig[] = data.map((model) => ({
         id: String(model.id),
-        name: model.model || 'Unknown Model', // 后端返回的是model字段
+        name: model.model || "Unknown Model", // 后端返回的是model字段
         description: getModelDescription(model.model), // 根据模型名称生成描述
         logo: `/models/${getLogo(model.model)}`, // 根据模型名称获取logo
         model_id: model.id, // 使用id作为model_id，保持原始类型
@@ -284,18 +304,21 @@ const fetchModels = async () => {
 
       // 如果当前没有选择的模型，选择第一个可用的模型
       if (!selectedModel.value && validatedModels.length > 0) {
-        const firstUsableModel = validatedModels.find(model => model.usable !== false);
+        const firstUsableModel = validatedModels.find(
+          (model) => model.usable !== false
+        );
         if (firstUsableModel) {
           handleModelSelect(firstUsableModel);
         }
       }
     } else {
-      console.error('Unexpected response format: models is not an array', data);
+      console.error("Unexpected response format: models is not an array", data);
     }
   } catch (err) {
-    console.error('Error fetching models:', err);
+    console.error("Error fetching models:", err);
     // 显示错误消息给用户
-    const errorMessage = err instanceof Error ? err.message : '获取模型列表失败';
+    const errorMessage =
+      err instanceof Error ? err.message : "获取模型列表失败";
     showSnackbar(errorMessage);
   } finally {
     loadingModels.value = false;
@@ -304,43 +327,49 @@ const fetchModels = async () => {
 
 // 辅助函数：根据模型名称获取模型类
 function getModelClass(modelName: string): string {
-  if (!modelName) return 'unknown';
+  if (!modelName) return "unknown";
+
+  if (!modelName) return "unknown";
 
   const name = modelName.toLowerCase();
-  if (name.includes('gpt')) return 'openai';
-  if (name.includes('claude')) return 'anthropic';
-  if (name.includes('gemini')) return 'google';
-  if (name.includes('llama')) return 'meta';
-  return 'unknown';
+  if (name.includes("gpt")) return "openai";
+  if (name.includes("claude")) return "anthropic";
+  if (name.includes("gemini")) return "google";
+  if (name.includes("llama")) return "meta";
+  return "unknown";
 }
 
 // 辅助函数：根据模型名称获取logo文件名
 function getLogo(modelName: string): string {
-  if (!modelName) return 'unknown.png';
+  if (!modelName) return "unknown.png";
+
+  if (!modelName) return "unknown.png";
 
   const name = modelName.toLowerCase();
-  if (name.includes('gpt')) return 'openai.png';
-  if (name.includes('claude')) return 'anthropic.png';
-  if (name.includes('gemini')) return 'google.png';
-  if (name.includes('llama')) return 'meta.png';
-  return 'unknown.png';
+  if (name.includes("gpt")) return "openai.png";
+  if (name.includes("claude")) return "anthropic.png";
+  if (name.includes("gemini")) return "google.png";
+  if (name.includes("llama")) return "meta.png";
+  return "unknown.png";
 }
 
 // 辅助函数：根据模型名称生成描述
 function getModelDescription(modelName: string): string {
-  if (!modelName) return '';
+  if (!modelName) return "";
+
+  if (!modelName) return "";
 
   const name = modelName.toLowerCase();
-  if (name.includes('gpt-4')) return 'OpenAI GPT-4';
-  if (name.includes('gpt-3.5')) return 'OpenAI GPT-3.5 Turbo';
-  if (name.includes('claude')) return 'Anthropic Claude';
-  if (name.includes('gemini')) return 'Google Gemini';
-  if (name.includes('llama')) return 'Meta LLaMA';
+  if (name.includes("gpt-4")) return "OpenAI GPT-4";
+  if (name.includes("gpt-3.5")) return "OpenAI GPT-3.5 Turbo";
+  if (name.includes("claude")) return "Anthropic Claude";
+  if (name.includes("gemini")) return "Google Gemini";
+  if (name.includes("llama")) return "Meta LLaMA";
   return modelName;
 }
 // 添加一个显示错误消息的函数（如果你没有）
 const snackbar = ref(false);
-const snackbarText = ref('');
+const snackbarText = ref("");
 const showSnackbar = (text: string) => {
   snackbarText.value = text;
   snackbar.value = true;
@@ -354,7 +383,7 @@ const saveSettings = () => {
     const modelConfig: ModelConfig = {
       ...selectedModel.value,
       api_key: modelApiKey.value,
-      custom_url: modelCustomUrl.value
+      custom_url: modelCustomUrl.value,
     };
 
     // 更新状态中的当前模型
@@ -366,13 +395,15 @@ const saveSettings = () => {
     }
 
     stateStore.modelConfigs[modelConfig.id] = {
-      ...modelConfig
+      ...modelConfig,
     };
 
     // 保存模型配置到localStorage
-    localStorage.setItem("modelConfigs", JSON.stringify(stateStore.modelConfigs));
+    localStorage.setItem(
+      "modelConfigs",
+      JSON.stringify(stateStore.modelConfigs)
+    );
   }
-
 
   // 保存聊天设置
   updateChatSettings();
@@ -383,10 +414,13 @@ const saveSettings = () => {
 
 // 更新聊天设置
 const updateChatSettings = () => {
-  localStorage.setItem('chatSettings', JSON.stringify({
-    enableWebSearch: enableWebSearch.value,
-    frugalMode: frugalMode.value
-  }));
+  localStorage.setItem(
+    "chatSettings",
+    JSON.stringify({
+      enableWebSearch: enableWebSearch.value,
+      frugalMode: frugalMode.value,
+    })
+  );
 };
 
 // 初始化组件
@@ -398,10 +432,13 @@ onMounted(() => {
       stateStore.modelConfigs = JSON.parse(savedConfigs);
 
       // 如果当前有选中的模型，加载它的API密钥和URL
-      if (selectedModel.value && stateStore.modelConfigs[selectedModel.value.id]) {
+      if (
+        selectedModel.value &&
+        stateStore.modelConfigs[selectedModel.value.id]
+      ) {
         const config = stateStore.modelConfigs[selectedModel.value.id];
-        modelApiKey.value = config.api_key || '';
-        modelCustomUrl.value = config.custom_url || '';
+        modelApiKey.value = config.api_key || "";
+        modelCustomUrl.value = config.custom_url || "";
       }
     } catch (e) {
       console.error("Error parsing modelConfigs:", e);
@@ -412,7 +449,7 @@ onMounted(() => {
   }
 
   // 加载保存的聊天设置
-  const savedSettings = localStorage.getItem('chatSettings');
+  const savedSettings = localStorage.getItem("chatSettings");
   if (savedSettings) {
     const settings = JSON.parse(savedSettings);
     enableWebSearch.value = settings.enableWebSearch ?? true;
