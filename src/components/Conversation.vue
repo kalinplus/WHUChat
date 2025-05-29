@@ -5,7 +5,7 @@ import { useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import { storeToRefs } from "pinia";
 import { addConversation } from "@/utils/helper";
-import ModelSelector from "./ModelSelector.vue"; // TODO: 稍后创建这个组件
+import ModelSelector from "./ModelSelector.vue";
 import type {
   ChatParameters,
   ChatRequestData,
@@ -16,6 +16,7 @@ import type {
 } from "@/types/types";
 import axios from "axios";
 import { useChatSettingsManager } from "@/stores/settings";
+import type { UserProfile } from "@/stores/states";
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -33,6 +34,54 @@ interface Settings {
   enableWebSearch: boolean;
   frugalMode: boolean;
 }
+
+const ensureUserSession = async (): Promise<boolean> => {
+  if (stateStore.user?.uuid) {
+    return true; // 用户已存在，会话有效
+  }
+
+  console.log("User UUID not found in store, attempting to fetch session...");
+  try {
+    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
+    // 确保使用正确的 API 路径，如果后端直接暴露 /v1/gate/get_chatserver，则不需要 /api 前缀
+    const response = await fetch(`${baseUrl}/api/v1/gate/get_chatserver`, {
+      method: "GET",
+      credentials: "include", // 必须携带 cookie
+    });
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch user session, HTTP status: ${response.status}`
+      );
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.error === 0 && data.uuid) {
+      console.log("User session fetched successfully:", data);
+      stateStore.setUser({
+        uuid: data.uuid,
+        username: data.username,
+        addr: data.addr,
+        // email 和 avatar_url 根据实际 API 返回情况添加
+      } as UserProfile);
+      return true;
+    } else {
+      console.error(
+        "Failed to fetch user session, API error or no UUID:",
+        data.error
+      );
+      stateStore.setUser(null); // 清除可能存在的无效用户状态
+      return false;
+    }
+  } catch (error) {
+    console.error("Exception during user session fetch:", error);
+    stateStore.setUser(null);
+    return false;
+  }
+};
+
 const settings = ref<Settings>({
   enableWebSearch: true,
   frugalMode: true,
@@ -241,7 +290,6 @@ const resetWebsocketTimeout = () => {
 const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
 
-// 🔧 改进的 WebSocket onmessage 处理
 const setupWebSocket = (sessionId: number) => {
   // 关闭已存在的连接
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
@@ -433,7 +481,6 @@ const setupWebSocket = (sessionId: number) => {
 let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// 🔧 改进的 abortFetch 函数
 const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
@@ -521,8 +568,15 @@ const clearNewSessionData = () => {
 };
 
 // 发送对话，获取请求
-// 🔧 改进的 fetchReply 函数
 const fetchReply = async (message: PromptArrayItem[]) => {
+  // 在发送消息前确保用户会话存在
+  const sessionEnsured = await ensureUserSession();
+  if (!sessionEnsured || !stateStore.user?.uuid) {
+    console.error("User session could not be ensured. Aborting message send.");
+    showSnackbar(t("loginRequiredError"));
+    return;
+  }
+
   // 创建 AbortController 用于取消 HTTP 请求
   ctrl = new AbortController();
 
@@ -556,7 +610,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 
   const requestData: ChatRequestData = {
-    uuid: stateStore.user?.uuid || 1,
+    uuid: stateStore.user.uuid || 1,
     session_id: props.conversation.id || null,
     sender: "user",
     model_id: modelId,
@@ -620,14 +674,14 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       fetchTimeout = null;
     }
 
-    // 🔧 关键改进：如果是新对话，先保存会话信息，但不立即更新路由和标题
+    // 如果是新对话，先保存会话信息，但不立即更新路由和标题
     const isNewConversation = !props.conversation.id && responseData.session_id;
 
     if (isNewConversation) {
       // 立即更新 conversation ID，这样 WebSocket 可以正确连接
       props.conversation.id = responseData.session_id;
 
-      // 🔧 保存新会话数据，等待消息接收完成后处理
+      // 保存新会话数据，等待消息接收完成后处理
       newSessionData.value = {
         sessionId: responseData.session_id,
         title: formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat"),
@@ -652,7 +706,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   }
 };
 
-// 🔧 新增：消息接收完成后的处理函数
+// 消息接收完成后的处理函数
 const handleMessageComplete = async () => {
   console.log("Message complete, checking for post-processing...");
 
@@ -695,7 +749,7 @@ const handleMessageComplete = async () => {
   }
 };
 
-// 🔧 新增：异步标题更新函数
+// 异步标题更新函数
 const updateConversationTitleAsync = async (
   sessionId: number,
   title: string
@@ -880,7 +934,6 @@ const loadConversationHistory = async () => {
     // 清空现有消息，避免污染
     props.conversation.messages = [];
 
-    // TODO: uuid 这里要用正常逻辑，不能硬编码
     const requestData = {
       uuid: stateStore.user?.uuid || 1,
       session_id: props.conversation.id,
@@ -925,8 +978,7 @@ const loadConversationHistory = async () => {
                 backendMsg.prompt as PromptArrayItem[];
               for (const part of prompt_array) {
                 if (part.text) {
-                  // TODO: 暂时用这个逻辑，后面需要添加检测 type，等后端的返回值更改
-                  // FIXME: 现在（和以后）只考虑文本
+                  // 只考虑文本
                   messageContent = part.text;
                 }
               }

@@ -329,8 +329,6 @@ const fetchModels = async () => {
 function getModelClass(modelName: string): string {
   if (!modelName) return "unknown";
 
-  if (!modelName) return "unknown";
-
   const name = modelName.toLowerCase();
   if (name.includes("gpt")) return "openai";
   if (name.includes("claude")) return "anthropic";
@@ -343,8 +341,6 @@ function getModelClass(modelName: string): string {
 function getLogo(modelName: string): string {
   if (!modelName) return "unknown.png";
 
-  if (!modelName) return "unknown.png";
-
   const name = modelName.toLowerCase();
   if (name.includes("gpt")) return "openai.png";
   if (name.includes("claude")) return "anthropic.png";
@@ -355,8 +351,6 @@ function getLogo(modelName: string): string {
 
 // 辅助函数：根据模型名称生成描述
 function getModelDescription(modelName: string): string {
-  if (!modelName) return "";
-
   if (!modelName) return "";
 
   const name = modelName.toLowerCase();
