@@ -198,12 +198,14 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import request from "@/utils/request";
 import CryptoJS from "crypto-js";
+import { useStateStore, type UserProfile } from "@/stores/states";
 
 // ======================
 // 依赖注入
 // ======================
 const router = useRouter();
 const { t } = useI18n();
+const stateStore = useStateStore();
 
 // ======================
 // 加密配置
@@ -227,6 +229,7 @@ const loading = ref(false);
 const timer = ref<any>(null);
 const errorCode = ref(0);
 const loadingForVrfcode = ref(false);
+const user = ref<UserProfile>();
 
 // ======================
 // 类型定义
@@ -369,6 +372,11 @@ const handleLogin = async () => {
         uuid: result.value.uuid,
         error: result.value.error,
       };
+      user.value = {
+        uuid: result.value.uuid,
+        username: result.value.username,
+        email: result.value.email,
+      };
       errorCode.value = result.value.error;
       console.log(loginResult.value);
       if (loginResult.value?.error == 0) {
@@ -393,7 +401,7 @@ const handleLoginSuccess = () => {
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
-
+  stateStore.setUser(user.value ?? null);
   // 检查重定向
   setTimeout(() => {
     router.push("/chat");
