@@ -10,7 +10,7 @@ import {
   useDrawer,
   useUser,
 } from "../composables/states";
-import { useAuthFetch} from "@/composables/fetch";
+import { useAuthFetch } from "@/composables/fetch";
 import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
@@ -375,17 +375,12 @@ const signOut = async () => {
         response.status,
         response.data
       );
-      showSnackbar(
-        t(
-          "signOutError",
-          `登出失败: ${response.data?.message || response.statusText}`
-        )
-      );
+      showSnackbar(t("signOutError"));
     }
   } catch (error) {
     console.error("Error during sign out:", error);
     // 处理请求发送失败等网络错误
-    showSnackbar(t("signOutError", "登出过程中发生网络错误"));
+    showSnackbar(t("signOutError"));
   }
 };
 

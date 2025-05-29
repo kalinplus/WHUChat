@@ -143,5 +143,6 @@
   "new Chat": "New Chat",
   "titleUpdateError": "Title Update Failed",
   "emptyResponseFromServer": "Empty Response From Server",
-  "loginRequiredError": "Invalid User, please login again"
+  "loginRequiredError": "Invalid User, please login again",
+  "signOutError": "Sign Out Error"
 }
