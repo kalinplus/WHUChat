@@ -150,5 +150,6 @@
   "new Chat": "新对话",
   "titleUpdateError": "标题更新失败",
   "emptyResponseFromServer": "服务器未返回有效内容",
-  "loginRequiredError": "用户 id 无效，请先登录"
+  "loginRequiredError": "用户 id 无效，请先登录",
+  "signOutError": "登出失败"
 }

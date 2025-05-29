@@ -39,8 +39,7 @@ const selectModel = (model: ModelConfig) => {
 // 获取模型列表
 const fetchModels = async () => {
   try {
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const url = `${baseUrl}/api/v1/chat/models`;
+    const url = `/api/v1/chat/models`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {

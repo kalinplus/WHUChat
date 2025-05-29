@@ -10,7 +10,7 @@ import {
   useDrawer,
   useUser,
 } from "../composables/states";
-import { useAuthFetch, useMyFetch } from "@/composables/fetch";
+import { useAuthFetch} from "@/composables/fetch";
 import { useRoute, useRouter } from "vue-router";
 import { useStateStore } from "@/stores/states";
 import UserFooter from "./UserFooter.vue";
@@ -309,11 +309,10 @@ const loadConversations = async () => {
   loadingConversations.value = true;
 
   try {
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const token = getToken();
 
     const response = await axios.post(
-      `${baseUrl}/api/v1/chat/history`,
+      `/api/v1/chat/history`,
       // TODO: uuid 要和登录注册联动好，现在 1 是测试
       { uuid: stateStore.user?.uuid || 1 },
       {
@@ -358,13 +357,35 @@ const loadConversations = async () => {
     loadingConversations.value = false;
   }
 };
-// TODO: 与登录注册功能和接口对接
 const signOut = async () => {
-  const { data, error } = await useMyFetch("/api/account/logout/", {
-    method: "POST",
-  });
-  if (!error.value) {
-    await logout();
+  try {
+    // TODO: 确认后端登出接口是否需要传递 token 或其他认证信息
+    // 如果后端登出接口需要认证，确保 axios 请求中包含了必要的 headers (e.g., Authorization)
+    const response = await axios.post("/api/account/logout/"); // 假设登出接口不需要额外参数
+
+    // 根据后端实际返回的成功状态进行判断，这里假设 HTTP 2xx 状态码表示成功
+    if (response.status >= 200 && response.status < 300) {
+      await logout(); // 调用 utils/auth.ts 中的 logout 清理本地状态
+      // 登出成功后，可以考虑跳转到登录页或首页
+      router.push("/login"); // 示例：跳转到登录页
+    } else {
+      // 处理后端返回的错误，例如显示一个提示
+      console.error(
+        "Logout failed with status:",
+        response.status,
+        response.data
+      );
+      showSnackbar(
+        t(
+          "signOutError",
+          `登出失败: ${response.data?.message || response.statusText}`
+        )
+      );
+    }
+  } catch (error) {
+    console.error("Error during sign out:", error);
+    // 处理请求发送失败等网络错误
+    showSnackbar(t("signOutError", "登出过程中发生网络错误"));
   }
 };
 

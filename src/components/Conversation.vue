@@ -17,6 +17,7 @@ import type {
 import axios from "axios";
 import { useChatSettingsManager } from "@/stores/settings";
 import type { UserProfile } from "@/stores/states";
+import { useWindowScroll } from "@vueuse/core";
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -254,9 +255,7 @@ const setupWebSocket = (sessionId: number) => {
       ? parseInt(currentModel.value.model_id as string, 10)
       : (currentModel.value.model_id as number);
 
-  const wsUrl = `wss://${
-    import.meta.env.VITE_API_HOST
-  }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
+  const wsUrl = `/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
     stateStore.user?.uuid || 1
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     modelId
@@ -590,8 +589,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   try {
     stateStore.fetchingResponse = true;
 
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const response = await fetch(`${baseUrl}/api/v1/chat/send_message`, {
+    const response = await fetch(`/api/v1/chat/send_message`, {
       signal: ctrl.signal,
       method: "POST",
       headers: {
@@ -706,18 +704,14 @@ const updateConversationTitleAsync = async (
 
     console.log("Updating title with data:", updateTitleRequestData);
 
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const updateTitleResponse = await fetch(
-      `${baseUrl}/api/v1/chat/update_title`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(updateTitleRequestData),
-      }
-    );
+    const updateTitleResponse = await fetch(`/api/v1/chat/update_title`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(updateTitleRequestData),
+    });
 
     if (!updateTitleResponse.ok) {
       const errorText = await updateTitleResponse.text();
@@ -865,8 +859,7 @@ onMounted(async () => {
 
   console.log("User UUID not found in store, attempting to fetch session...");
   try {
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
-    const response = await fetch(`${baseUrl}/api/v1/gate/get_chatserver`, {
+    const response = await fetch(`/api/v1/gate/get_chatserver`, {
       method: "GET",
       credentials: "include", // 必须携带 cookie
     });
@@ -946,9 +939,8 @@ const loadConversationHistory = async () => {
     };
 
     // 使用axios发送请求获取历史消息
-    const baseUrl = "https://" + import.meta.env.VITE_API_HOST;
     const response = await axios.post(
-      `${baseUrl}/api/v1/chat/browse_messages`,
+      `/api/v1/chat/browse_messages`,
       requestData,
       {
         headers: {
