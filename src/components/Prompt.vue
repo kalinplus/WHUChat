@@ -12,6 +12,7 @@ const submittingNewPrompt = ref(false);
 const promptInputErrorMessage = ref("");
 const loadingPrompts = ref(false);
 const deletingPromptIndex = ref<any>(null);
+const stateStore = useStateStore();
 
 const props = defineProps({
   usePrompt: {
@@ -97,7 +98,10 @@ const selectPrompt = (prompt: any) => {
   menu.value = false;
 };
 
-onMounted(() => {
+onMounted(async () => {
+  console.log("Prompt component mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
+
   loadPrompts();
 });
 </script>

@@ -30,7 +30,7 @@ watch(
   () => route.params,
   async (params) => {
     // @ts-ignore
-    const userId = params.user.uuid;
+    const userId = stateStore.user?.uuid || null; // 获取当前用户ID
     // @ts-ignore
     const sessionId = params.session_id;
 
@@ -115,6 +115,9 @@ const navTitle = computed(() => {
 });
 
 onMounted(async () => {
+  console.log("Chat page mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
+
   // @ts-ignore
   if (route.params.id) {
     conversation.value.loadingMessages = true;
