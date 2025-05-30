@@ -52,13 +52,13 @@ export default defineConfig({
                 console.error(
                   `导航守卫：获取会话失败，HTTP 状态: ${response.status}`
                 );
-                stateStore.setUser(null);
                 stateStore.setAddr("");
                 return next("/login");
               }
 
               const data: GetChatServer =
                 (await response.json()) as GetChatServer;
+              console.log("data", data)
 
               if (data.error === 0 && data.uuid) {
                 console.log("导航守卫：成功获取会话信息:", data);

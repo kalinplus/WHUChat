@@ -30,13 +30,13 @@ watch(
   () => route.params,
   async (params) => {
     // @ts-ignore
-    const userId = params.user.uuid;
+    // const userId = params.user.uuid;
     // @ts-ignore
-    const sessionId = params.session_id;
+    // const sessionId = params.session_id;
 
-    console.log(
-      `Route params changed: user=${userId}, session_id=${sessionId}`
-    );
+    // console.log(
+      // `Route params changed: user=${userId}, session_id=${sessionId}`
+    // );
 
     // 🔧 检查用户是否登录
     if (!stateStore.user) {
@@ -50,21 +50,21 @@ watch(
       return;
     }
 
-    if (sessionId) {
-      // 有会话ID，加载特定会话
-      conversation.value = {
-        id: Number(sessionId),
-        messages: [],
-        loadingMessages: true,
-      };
-    } else {
-      // 无会话ID，创建新会话
-      conversation.value = {
-        id: null,
-        messages: [],
-        loadingMessages: false,
-      };
-    }
+    // if (sessionId) {
+    //   // 有会话ID，加载特定会话
+    //   conversation.value = {
+    //     id: Number(sessionId),
+    //     messages: [],
+    //     loadingMessages: true,
+    //   };
+    // } else {
+    //   // 无会话ID，创建新会话
+    //   conversation.value = {
+    //     id: null,
+    //     messages: [],
+    //     loadingMessages: false,
+    //   };
+    // }
   },
   { immediate: true }
 );
