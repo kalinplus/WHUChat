@@ -132,7 +132,7 @@ onMounted(async () => {
 //   }
 // });
 
-const user = useUser(); // 获取用户信息
+const user = stateStore.getUser(); // 获取用户信息
 // 设置对话框控制
 const settingsDialogOpen = ref(false);
 

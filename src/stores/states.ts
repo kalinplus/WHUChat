@@ -30,6 +30,7 @@ export const useStateStore = defineStore("stateStore", {
     drawer: false,
     fetchingResponse: false,
     addr: null as string | null,
+    uuid: 1 as number,
   }),
   actions: {
     setCurrentModel(model: ModelConfig) {
@@ -111,6 +112,9 @@ export const useStateStore = defineStore("stateStore", {
     addConversation(conversation: any) {
       this.conversations.push(conversation);
     },
+    getUser() {
+      return this.user;
+    },
     setUser(user: UserProfile | null) {
       this.user = user;
     },
@@ -128,6 +132,12 @@ export const useStateStore = defineStore("stateStore", {
     },
     setAddr(addr: string | null) {
       this.addr = addr;
+    },
+    getUuid() {
+      return this.uuid;
+    },
+    setUuid(uuid: number) {
+      this.uuid = uuid;
     },
   },
 });
