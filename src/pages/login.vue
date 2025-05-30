@@ -359,6 +359,7 @@ const handleLogin = async () => {
       // { withCredentials: true }
     );
     console.log(encryptPassword(loginForm.value.password));
+    console.log("[login.vue] Raw response from /api/v1/gate/login:", result.value);
 
     // const result = await request.get("http://localhost:3000/login");
     // 处理响应
@@ -401,6 +402,7 @@ const handleLoginSuccess = () => {
   // 展示成功状态
   showAlert.value = true;
   alertType.value = "success";
+  console.log("[login.vue] User object before setUser:", user.value);
   stateStore.setUser(user.value ?? null);
   // 检查重定向
   setTimeout(() => {
