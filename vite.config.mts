@@ -30,62 +30,88 @@ export default defineConfig({
     VueRouter({
       dts: "src/typed-router.d.ts",
       routesFolder: "src/pages",
-      extendRoute(route: any) {
-        // Check if the current route is the one we want to modify
-        if (route.name === "/chat" || route.path === "/chat") {
+      extendRoute(route: any, parent: any | undefined) { // Added parent argument for context
+        // Log all route names and paths being processed by extendRoute
+        console.log(`[vite.config.mts extendRoute] Processing route: Name='${route.name}', Path='${route.path}'`);
+
+        // Try to match the chat route more reliably
+        // For src/pages/chat.vue, the path is typically /chat
+        if (route.path === "/chat") {
           console.log(
-            "vite.config.mts: Extending /chat route with beforeEnter guard."
+            "[vite.config.mts extendRoute] Matched /chat. Applying beforeEnter guard."
           );
-          // Add or modify the beforeEnter guard
+
           route.beforeEnter = async (to: any, from: any, next: any) => {
+            // Dynamically import Pinia store to ensure it uses the client-side instance
+            const { useStateStore } = await import("./src/stores/states");
             const stateStore = useStateStore();
+            // Also dynamically import UserProfile if needed for type casting, or ensure GetChatServer is comprehensive
+            const { UserProfile } = await import("./src/stores/states");
+
+
             console.log(
-              "导航守卫 (vite.config.mts via extendRoute): 尝试获取 get_chatserver 信息..."
+              "[Browser Guard /chat] beforeEnter: Attempting get_chatserver..."
             );
             try {
               const response = await fetch(`/api/v1/gate/get_chatserver`, {
                 method: "GET",
-                credentials: "include",
+                credentials: "include", // Important for sending cookies
               });
 
               if (!response.ok) {
                 console.error(
-                  `导航守卫：获取会话失败，HTTP 状态: ${response.status}`
+                  `[Browser Guard /chat] Fetch failed: ${response.status}`
                 );
-                stateStore.setAddr("");
-                return next("/login");
+                stateStore.setUser(null); // Clear user state
+                stateStore.setAddr(null);  // Clear addr state
+                // Assuming login route name is '/login'. Verify this.
+                // If src/pages/login.vue exists, its name is likely '/login'.
+                return next({ name: "/login" });
               }
 
-              const data: GetChatServer =
-                (await response.json()) as GetChatServer;
-              console.log("data", data)
+              // Define GetChatServer interface directly here or ensure it's imported if it's complex
+              interface GetChatServerResponse {
+                uuid: number;
+                username: string;
+                addr: string;
+                error: number;
+                // email?: string;
+                // avatar_url?: string;
+              }
+              const data: GetChatServerResponse = await response.json();
+              console.log("[Browser Guard /chat] Fetched data:", data);
 
               if (data.error === 0 && data.uuid) {
-                console.log("导航守卫：成功获取会话信息:", data);
+                console.log("[Browser Guard /chat] Success:", data);
                 stateStore.setUser({
                   uuid: data.uuid,
                   username: data.username,
-                } as UserProfile);
+                  // email: data.email, // Uncomment if API provides it
+                  // avatar_url: data.avatar_url, // Uncomment if API provides it
+                } as InstanceType<typeof UserProfile>); // Or ensure UserProfile fields match data
                 stateStore.setAddr(data.addr);
                 next();
               } else {
                 console.error(
-                  "导航守卫：获取会话失败，API 错误或无 UUID:",
-                  data.error
+                  `[Browser Guard /chat] API error or no UUID: ${data.error}`
                 );
-                next("/login");
+                stateStore.setUser(null);
+                stateStore.setAddr(null);
+                next({ name: "/login" }); // Assuming login route name is '/login'
               }
             } catch (error) {
-              console.error("导航守卫：获取会话期间发生异常:", error);
-              next("/login");
+              console.error("[Browser Guard /chat] Exception:", error);
+              // Ensure store is available for cleanup even in catch block after an await
+              const { useStateStore: catchStateStore } = await import("./src/stores/states");
+              const storeForCatch = catchStateStore();
+              storeForCatch.setUser(null);
+              storeForCatch.setAddr(null);
+              next({ name: "/login" }); // Assuming login route name is '/login'
             }
           };
         }
-        // IMPORTANT: Always return the route object or a modified version of it
-        // If you don't want to modify a route, just return it as is.
-        // If you want to remove a route, return undefined.
         return route;
-      },
+      }
     }),
     Layouts(),
     AutoImport({

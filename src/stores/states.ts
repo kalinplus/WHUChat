@@ -116,7 +116,9 @@ export const useStateStore = defineStore("stateStore", {
       return this.user;
     },
     setUser(user: UserProfile | null) {
+      console.log("[stores/states.ts] setUser called with:", user);
       this.user = user;
+      console.log("[stores/states.ts] stateStore.user after assignment:", this.user);
     },
     toggleDrawer() {
       this.drawer = !this.drawer;
@@ -131,7 +133,9 @@ export const useStateStore = defineStore("stateStore", {
       return this.addr;
     },
     setAddr(addr: string | null) {
+      console.log("[stores/states.ts] setAddr called with:", addr);
       this.addr = addr;
+      console.log("[stores/states.ts] stateStore.addr after assignment:", this.addr);
     },
     getUuid() {
       return this.uuid;
