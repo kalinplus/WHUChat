@@ -67,7 +67,9 @@ const fetchModels = async () => {
 };
 
 // 组件挂载时获取模型列表
-onMounted(() => {
+onMounted(async () => {
+  console.log("ModelSelector mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
   fetchModels();
 });
 
