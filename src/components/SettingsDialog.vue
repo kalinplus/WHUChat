@@ -285,13 +285,15 @@ const fetchModels = async () => {
       throw new Error(`API error: ${data.error}`);
     }
 
+    const modelList = data?.models;
+
     // 处理返回的模型列表数据
-    if (Array.isArray(data)) {
+    if (Array.isArray(modelList)) {
       // 将后端返回的模型数据映射为前端需要的格式
-      const validatedModels: ModelConfig[] = data.map((model) => ({
+      const validatedModels: ModelConfig[] = modelList.map((model) => ({
         id: String(model.id),
-        name: model.model || "Unknown Model", // 后端返回的是model字段
-        description: getModelDescription(model.model), // 根据模型名称生成描述
+        name: model.name || "Unknown Model", // 后端返回的是model字段
+        description: getModelDescription(model.desc), // 根据模型名称生成描述
         logo: `/models/${getLogo(model.model)}`, // 根据模型名称获取logo
         model_id: model.id, // 使用id作为model_id，保持原始类型
         model_class: getModelClass(model.model), // 根据模型名称推断class
@@ -417,7 +419,10 @@ const updateChatSettings = () => {
 };
 
 // 初始化组件
-onMounted(() => {
+onMounted(async () => {
+  console.log("SettingsDialog mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
+
   // 加载模型配置
   const savedConfigs = localStorage.getItem("modelConfigs");
   if (savedConfigs) {

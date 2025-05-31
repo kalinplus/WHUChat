@@ -7,15 +7,17 @@
     "nightwatch.conf.*",
     "playwright.config.*",
     "src/stores/states.ts",
-    "src/utils/localStorage.ts"
+    "src/utils/localStorage.ts",
+    "src/utils/enums.ts"
   ],
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   }
 }

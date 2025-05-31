@@ -30,6 +30,7 @@ export const useStateStore = defineStore("stateStore", {
     drawer: false,
     fetchingResponse: false,
     addr: null as string | null,
+    addrPromise: null as Promise<string> | null
   }),
   actions: {
     setCurrentModel(model: ModelConfig) {
@@ -133,5 +134,36 @@ export const useStateStore = defineStore("stateStore", {
       this.addr = addr;
       console.log("[stores/states.ts] stateStore.addr after assignment:", this.addr);
     },
+    async fetchAddr() {
+      console.log("Fetching address from server...");
+      if (this.addrPromise) {
+        return this.addrPromise; // 如果已经有请求在进行，直接返回
+      }
+
+      if (this.addr) {
+        return Promise.resolve(this.addr); // 如果地址已存在，直接返回
+      }
+
+      this.addrPromise = fetch("/api/v1/gate/get_chatserver")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const result = data as { addr?: string, error: number };
+          if (result.error !== 0) {
+            throw new Error("Server refused: " + result.error);
+          }
+
+          console.log("Address fetched:", result.addr);
+          this.addr = result.addr ?? "";
+          this.addrPromise = null;
+          return this.addr;
+        });
+
+      return this.addrPromise;
+    }
   },
 });

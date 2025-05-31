@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useAuthFetch } from "@/composables/fetch";
+import { useStateStore } from "@/stores/states";
 
 const { t } = useI18n();
 
@@ -161,7 +162,11 @@ defineExpose({
   loadDocs,
 });
 
-onMounted(() => {
+const stateStore = useStateStore();
+
+onMounted(async () => {
+  console.log("DocumentsManage mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
   loadDocs();
 });
 </script>

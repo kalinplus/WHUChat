@@ -385,6 +385,8 @@ const signOut = async () => {
 };
 
 onMounted(async () => {
+  console.log("NavigationDrawer mounted");
+  await stateStore.fetchAddr(); // 确保地址信息已加载
   loadConversations();
 });
 

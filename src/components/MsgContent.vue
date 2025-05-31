@@ -74,6 +74,7 @@ const bindCopyCodeToButtons = () => {
 };
 
 onMounted(() => {
+  console.log("MsgContent mounted");
   bindCopyCodeToButtons();
 });
 </script>
