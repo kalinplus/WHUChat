@@ -38,6 +38,7 @@ watch(
       `Route params changed: user=${userId}, session_id=${sessionId}`
     );
 
+    console.log("[chat.vue watch] stateStore.user before check:", JSON.stringify(stateStore.user));
     // 🔧 检查用户是否登录
     if (!stateStore.user) {
       console.log("User not logged in, showing guest mode");
@@ -115,6 +116,7 @@ const navTitle = computed(() => {
 });
 
 onMounted(async () => {
+
   console.log("Chat page mounted");
   await stateStore.fetchAddr(); // 确保地址信息已加载
 
