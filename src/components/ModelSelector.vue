@@ -48,24 +48,55 @@ const fetchModels = async () => {
       credentials: 'include',
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        availableModels.value = data.map(model => ({
-          id: String(model.id),
-          name: model.model || 'Unknown Model',
-          description: model.model,
-          logo: "/models/anthropic.png", // 默认logo
-          model_id: model.id,
-          usable: model.usable,
-        }));
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Raw API response:', data); // 调试日志
+
+    // 检查错误码
+    if (data.error !== undefined && data.error !== 0) {
+      throw new Error(`API error: ${data.error}`);
+    }
+
+    // 提取 models 数组
+    const modelList = data.models || data; // 兼容两种可能的返回格式
+    
+    // 检查正确的变量
+    if (Array.isArray(modelList)) {
+      availableModels.value = modelList.map(model => ({
+        id: String(model.id),
+        name: model.name || 'Unknown Model',
+        description: model.description || model.name || 'No description',
+        logo: `/models/${getLogo(model.name)}`, // 根据模型名称获取logo
+        model_id: model.id,
+        usable: model.usable !== false, // 默认为 true，除非明确为 false
+      }));
+      
+      console.log('Parsed models:', availableModels.value);
+    } else {
+      console.error('Unexpected response format: models is not an array', data);
+      throw new Error('Invalid response format: expected models array');
     }
   } catch (error) {
     console.error('Error fetching models:', error);
   }
 };
 
+// 辅助函数：根据模型名称获取logo文件名
+function getLogo(modelName: string): string {
+  if (!modelName) return "unknown.png";
+
+  const name = modelName.toLowerCase();
+  if (name.includes("gpt")) return "openai.png";
+  if (name.includes("claude")) return "anthropic.png";
+  if (name.includes("gemini")) return "google.png";
+  if (name.includes("llama")) return "meta.png";
+  if (name.includes("deepseek")) return "deepseek.png"; // 添加 deepseek 支持
+  return "unknown.png";
+}
+  
 // 组件挂载时获取模型列表
 onMounted(async () => {
   console.log("ModelSelector mounted");
