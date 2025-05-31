@@ -14,6 +14,7 @@ interface ModelConfig {
   description: string;
   logo: string;
   model_id: string | number;
+  model_class: string;
   usable: boolean;
 }
 
@@ -55,7 +56,7 @@ const fetchModels = async () => {
     const data = await response.json();
     console.log('Raw API response:', data); // 调试日志
 
-    // 检查错误码
+    // 修复：正确检查错误码
     if (data.error !== undefined && data.error !== 0) {
       throw new Error(`API error: ${data.error}`);
     }
@@ -63,7 +64,6 @@ const fetchModels = async () => {
     // 提取 models 数组
     const modelList = data.models || data; // 兼容两种可能的返回格式
     
-    // 检查正确的变量
     if (Array.isArray(modelList)) {
       availableModels.value = modelList.map(model => ({
         id: String(model.id),
@@ -71,6 +71,7 @@ const fetchModels = async () => {
         description: model.description || model.name || 'No description',
         logo: `/models/${getLogo(model.name)}`, // 根据模型名称获取logo
         model_id: model.id,
+        model_class: getModelClass(model.name), // 添加缺失的 model_class 字段
         usable: model.usable !== false, // 默认为 true，除非明确为 false
       }));
       
@@ -93,10 +94,23 @@ function getLogo(modelName: string): string {
   if (name.includes("claude")) return "anthropic.png";
   if (name.includes("gemini")) return "google.png";
   if (name.includes("llama")) return "meta.png";
-  if (name.includes("deepseek")) return "deepseek.png"; // 添加 deepseek 支持
+  if (name.includes("deepseek")) return "deepseek.png"; 
   return "unknown.png";
 }
-  
+
+// 辅助函数：根据模型名称获取模型类
+function getModelClass(modelName: string): string {
+  if (!modelName) return "unknown";
+
+  const name = modelName.toLowerCase();
+  if (name.includes("gpt")) return "openai";
+  if (name.includes("claude")) return "anthropic";
+  if (name.includes("gemini")) return "google";
+  if (name.includes("llama")) return "meta";
+  if (name.includes("deepseek")) return "deepseek"; 
+  return "unknown";
+}
+
 // 组件挂载时获取模型列表
 onMounted(async () => {
   console.log("ModelSelector mounted");
