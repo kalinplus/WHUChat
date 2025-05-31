@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useAuthFetch } from "@/composables/fetch";
 import { onMounted, ref } from "vue";
-import { useStateStore } from "@/stores/states";
 
 const menu = ref(false);
 const prompts = ref<Array<any>>([]);
@@ -12,7 +10,34 @@ const submittingNewPrompt = ref(false);
 const promptInputErrorMessage = ref("");
 const loadingPrompts = ref(false);
 const deletingPromptIndex = ref<any>(null);
-const stateStore = useStateStore();
+
+// localStorage 键名
+const PROMPTS_STORAGE_KEY = "whuchat_prompts";
+
+// 生成唯一 ID
+const generateId = () => {
+  return Date.now() + Math.random().toString(36).substr(2, 9);
+};
+
+// 从 localStorage 加载提示词
+const loadPromptsFromStorage = () => {
+  try {
+    const storedPrompts = localStorage.getItem(PROMPTS_STORAGE_KEY);
+    return storedPrompts ? JSON.parse(storedPrompts) : [];
+  } catch (error) {
+    console.error("Error loading prompts from localStorage:", error);
+    return [];
+  }
+};
+
+// 保存提示词到 localStorage
+const savePromptsToStorage = (promptsData: Array<any>) => {
+  try {
+    localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(promptsData));
+  } catch (error) {
+    console.error("Error saving prompts to localStorage:", error);
+  }
+};
 
 const props = defineProps({
   usePrompt: {
@@ -26,42 +51,49 @@ const addPrompt = async () => {
     promptInputErrorMessage.value = "Please enter a prompt";
     return;
   }
+
   submittingNewPrompt.value = true;
-  const { data, error } = await useAuthFetch("/api/chat/prompts/", {
-    method: "POST",
-    body: JSON.stringify({
-      title: newTitlePrompt.value,
-      prompt: newPrompt.value,
-    }),
-  });
-  if (!error.value) {
-    prompts.value.push(data.value);
-    newTitlePrompt.value = null;
-    newPrompt.value = "";
-  }
+
+  // 模拟异步操作的延迟
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const newPromptData = {
+    id: generateId(),
+    title: newTitlePrompt.value,
+    prompt: newPrompt.value,
+    updatedAt: new Date().toISOString(),
+  };
+
+  prompts.value.push(newPromptData);
+  savePromptsToStorage(prompts.value);
+
+  newTitlePrompt.value = null;
+  newPrompt.value = "";
   submittingNewPrompt.value = false;
 };
 
 const editPrompt = (index: number) => {
-  editingPrompt.value = Object.assign({}, prompts.value[index]);
+  editingPrompt.value = {
+    ...prompts.value[index],
+    updating: false // 确保编辑状态开始时没有加载状态
+  };
 };
 
 const updatePrompt = async (index: number) => {
   editingPrompt.value.updating = true;
-  const { data, error } = await useAuthFetch(
-    `/api/chat/prompts/${editingPrompt.value.id}/`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        title: editingPrompt.value.title,
-        prompt: editingPrompt.value.prompt,
-      }),
-    }
-  );
-  if (!error.value) {
-    prompts.value[index] = editingPrompt.value;
-  }
-  editingPrompt.value.updating = false;
+
+  // 模拟异步操作的延迟
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // 更新本地数据，但不包含 updating 属性
+  const { updating, ...promptData } = editingPrompt.value;
+  prompts.value[index] = {
+    ...promptData,
+    updatedAt: new Date().toISOString(),
+  };
+  savePromptsToStorage(prompts.value);
+
+  // 清空编辑状态，退出编辑模式
   editingPrompt.value = null;
 };
 
@@ -71,24 +103,25 @@ const cancelEditPrompt = () => {
 
 const deletePrompt = async (index: number) => {
   deletingPromptIndex.value = index;
-  const { data, error } = await useAuthFetch(
-    `/api/chat/prompts/${prompts.value[index].id}/`,
-    {
-      method: "DELETE",
-    }
-  );
+
+  // 模拟异步操作的延迟
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // 从本地数据中删除
+  prompts.value.splice(index, 1);
+  savePromptsToStorage(prompts.value);
+
   deletingPromptIndex.value = null;
-  if (!error.value) {
-    prompts.value.splice(index, 1);
-  }
 };
 
 const loadPrompts = async () => {
   loadingPrompts.value = true;
-  // const { data, error } = await useAuthFetch("/api/chat/prompts/");
-  // if (!error.value) {
-  //   prompts.value = data.value as Array<any>;
-  // }
+
+  // 模拟异步操作的延迟
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // 从 localStorage 加载提示词
+  prompts.value = loadPromptsFromStorage();
 
   loadingPrompts.value = false;
 };
@@ -100,9 +133,7 @@ const selectPrompt = (prompt: any) => {
 
 onMounted(async () => {
   console.log("Prompt component mounted");
-  await stateStore.fetchAddr(); // 确保地址信息已加载
-
-  loadPrompts();
+  await loadPrompts();
 });
 </script>
 
@@ -161,11 +192,11 @@ onMounted(async () => {
                       <v-btn
                         variant="text"
                         :loading="editingPrompt.updating"
-                        @click="updatePrompt(idx)"
+                        @click.stop="updatePrompt(idx)"
                       >
                         <v-icon>mdi-check</v-icon>
                       </v-btn>
-                      <v-btn variant="text" @click="cancelEditPrompt()">
+                      <v-btn variant="text" @click.stop="cancelEditPrompt()">
                         <v-icon>mdi-close</v-icon>
                       </v-btn>
                     </div>
@@ -182,14 +213,18 @@ onMounted(async () => {
                   prompt.title ? prompt.title : prompt.prompt
                 }}</v-list-item-title>
                 <template v-slot:append>
-                  <v-btn size="small" variant="text" @click="editPrompt(idx)">
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    @click.stop="editPrompt(idx)"
+                  >
                     <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
                     size="small"
                     variant="text"
                     :loading="deletingPromptIndex === idx"
-                    @click="deletePrompt(idx)"
+                    @click.stop="deletePrompt(idx)"
                   >
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
