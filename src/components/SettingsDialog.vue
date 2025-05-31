@@ -263,16 +263,14 @@ const handleModelSelect = (model: ModelConfig) => {
 
 // 获取模型列表
 const fetchModels = async () => {
-  loadingModels.value = true;
   try {
     const url = `https://${stateStore.addr}/api/v1/chat/models`;
-
     const response = await fetch(url, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-      credentials: "include", // 携带cookie
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -280,63 +278,36 @@ const fetchModels = async () => {
     }
 
     const data = await response.json();
+    console.log('Raw API response:', data); // 调试日志
 
+    // 检查错误码
     if (data.error !== undefined && data.error !== 0) {
       throw new Error(`API error: ${data.error}`);
     }
 
-    const modelList = data?.models;
-
-    // 处理返回的模型列表数据
+    // 提取 models 数组
+    const modelList = data.models || data; // 兼容两种可能的返回格式
+    
+    // 检查正确的变量
     if (Array.isArray(modelList)) {
-      // 将后端返回的模型数据映射为前端需要的格式
-      const validatedModels: ModelConfig[] = modelList.map((model) => ({
+      availableModels.value = modelList.map(model => ({
         id: String(model.id),
-        name: model.name || "Unknown Model", // 后端返回的是model字段
-        description: getModelDescription(model.desc), // 根据模型名称生成描述
-        logo: `/models/${getLogo(model.model)}`, // 根据模型名称获取logo
-        model_id: model.id, // 使用id作为model_id，保持原始类型
-        model_class: getModelClass(model.model), // 根据模型名称推断class
-        usable: model.usable, // 保存可用状态
+        name: model.name || 'Unknown Model',
+        description: model.description || model.name || 'No description',
+        logo: `/models/${getLogo(model.name)}`, // 根据模型名称获取logo
+        model_id: model.id,
+        usable: model.usable !== false, // 默认为 true，除非明确为 false
       }));
-
-      console.log("Fetched models:", validatedModels);
-      availableModels.value = validatedModels;
-
-      // 如果当前没有选择的模型，选择第一个可用的模型
-      if (!selectedModel.value && validatedModels.length > 0) {
-        const firstUsableModel = validatedModels.find(
-          (model) => model.usable !== false
-        );
-        if (firstUsableModel) {
-          handleModelSelect(firstUsableModel);
-        }
-      }
+      
+      console.log('Parsed models:', availableModels.value);
     } else {
-      console.error("Unexpected response format: models is not an array", data);
+      console.error('Unexpected response format: models is not an array', data);
+      throw new Error('Invalid response format: expected models array');
     }
-  } catch (err) {
-    console.error("Error fetching models:", err);
-    // 显示错误消息给用户
-    const errorMessage =
-      err instanceof Error ? err.message : "获取模型列表失败";
-    showSnackbar(errorMessage);
-  } finally {
-    loadingModels.value = false;
+  } catch (error) {
+    console.error('Error fetching models:', error);
   }
 };
-
-// 辅助函数：根据模型名称获取模型类
-function getModelClass(modelName: string): string {
-  if (!modelName) return "unknown";
-
-  const name = modelName.toLowerCase();
-  if (name.includes("gpt")) return "openai";
-  if (name.includes("claude")) return "anthropic";
-  if (name.includes("gemini")) return "google";
-  if (name.includes("llama")) return "meta";
-  return "unknown";
-}
 
 // 辅助函数：根据模型名称获取logo文件名
 function getLogo(modelName: string): string {
@@ -347,28 +318,9 @@ function getLogo(modelName: string): string {
   if (name.includes("claude")) return "anthropic.png";
   if (name.includes("gemini")) return "google.png";
   if (name.includes("llama")) return "meta.png";
+  if (name.includes("deepseek")) return "deepseek.png"; // 添加 deepseek 支持
   return "unknown.png";
 }
-
-// 辅助函数：根据模型名称生成描述
-function getModelDescription(modelName: string): string {
-  if (!modelName) return "";
-
-  const name = modelName.toLowerCase();
-  if (name.includes("gpt-4")) return "OpenAI GPT-4";
-  if (name.includes("gpt-3.5")) return "OpenAI GPT-3.5 Turbo";
-  if (name.includes("claude")) return "Anthropic Claude";
-  if (name.includes("gemini")) return "Google Gemini";
-  if (name.includes("llama")) return "Meta LLaMA";
-  return modelName;
-}
-// 添加一个显示错误消息的函数（如果你没有）
-const snackbar = ref(false);
-const snackbarText = ref("");
-const showSnackbar = (text: string) => {
-  snackbarText.value = text;
-  snackbar.value = true;
-};
 
 // 保存设置
 const saveSettings = () => {
