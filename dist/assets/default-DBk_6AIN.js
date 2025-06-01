@@ -1,1 +1,0 @@
-import{d as o,c as t,w as a,V as n,a as r,r as s,o as c}from"./index-DwniyiIT.js";const i=o({__name:"default",setup(_){return(p,u)=>{const e=s("router-view");return c(),t(n,null,{default:a(()=>[r(e)]),_:1})}}});export{i as default};
