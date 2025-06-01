@@ -23,11 +23,10 @@ const allRoutes = [
   },
   {
     path: "/chat/:user",
-    redirect: "/chat",
-    // name: "conversation",
-    // component: chatComponent,
-    // props: true,
-    // meta: { requiresAuth: true },
+    name: "conversation",
+    component: chatComponent,
+    props: true,
+    meta: { requiresAuth: true },
   },
   {
     path: "/chat/:user/:session_id",
@@ -61,13 +60,19 @@ router.onError((err, to) => {
 
 // Add beforeEach guard for chat route to fetch user session
 // router.beforeEach(async (to, from, next) => {
-//   // Only apply this guard to /chat route
-//   if (to.path === "/chat") {
+//   // Only apply this guard to routes that require authentication
+//   if (to.meta?.requiresAuth || to.path.startsWith("/chat")) {
 //     console.log(
-//       "[Router Guard] Accessing /chat route, checking user session..."
+//       "[Router Guard] Accessing protected route, checking user session..."
 //     );
 
 //     const stateStore = useStateStore();
+
+//     // If user is already authenticated, proceed
+//     if (stateStore.user) {
+//       console.log("[Router Guard] User already authenticated:", stateStore.user);
+//       return next();
+//     }
 
 //     try {
 //       const response = await fetch(`/api/v1/gate/get_chatserver`, {
@@ -77,7 +82,11 @@ router.onError((err, to) => {
 
 //       if (!response.ok) {
 //         console.error(`[Router Guard] Fetch failed: ${response.status}`);
-//         return next({ name: "/login" });
+//         // For chat routes, redirect to login
+//         if (to.path.startsWith("/chat")) {
+//           return next({ path: "/login" });
+//         }
+//         return next();
 //       }
 
 //       const data = await response.json();
@@ -87,17 +96,27 @@ router.onError((err, to) => {
 //         console.log("[Router Guard] User session valid, setting state:", data);
 //         stateStore.setUser({
 //           uuid: data.uuid,
-//           username: data.username,
+//           username: data.username || `User${data.uuid}`,
 //         });
-//         stateStore.setAddr(data.addr);
+//         if (data.addr) {
+//           stateStore.setAddr(data.addr);
+//         }
 //         next();
 //       } else {
 //         console.error(`[Router Guard] API error or no UUID: ${data.error}`);
-//         next({ name: "/login" });
+//         // For chat routes, redirect to login
+//         if (to.path.startsWith("/chat")) {
+//           return next({ path: "/login" });
+//         }
+//         next();
 //       }
 //     } catch (error) {
 //       console.error("[Router Guard] Exception:", error);
-//       next({ name: "/login" });
+//       // For chat routes, redirect to login
+//       if (to.path.startsWith("/chat")) {
+//         return next({ path: "/login" });
+//       }
+//       next();
 //     }
 //   } else {
 //     // For all other routes, proceed normally

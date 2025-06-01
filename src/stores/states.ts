@@ -136,34 +136,64 @@ export const useStateStore = defineStore("stateStore", {
       console.log("[stores/states.ts] setAddr called with:", addr);
       this.addr = addr;
       console.log("[stores/states.ts] stateStore.addr after assignment:", this.addr);
-    },
-    async fetchAddr() {
+    },    async fetchAddr() {
       console.log("Fetching address from server...");
+      
+      // If there's already a request in progress, wait for it
       if (this.addrPromise) {
-        return this.addrPromise; // 如果已经有请求在进行，直接返回
+        console.log("Address fetch already in progress, waiting for result...");
+        return this.addrPromise;
       }
 
+      // If address already exists, return it
       if (this.addr) {
-        return Promise.resolve(this.addr); // 如果地址已存在，直接返回
+        console.log("Address already available:", this.addr);
+        return Promise.resolve(this.addr);
       }
 
-      this.addrPromise = fetch("/api/v1/gate/get_chatserver")
-        .then((response) => {
+      this.addrPromise = fetch("/api/v1/gate/get_chatserver", {
+        method: "GET",
+        credentials: "include"
+      })
+        .then(async (response) => {
           if (!response.ok) {
-            throw new Error("Network response was not ok");
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
+          
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error("Expected JSON but got:", text.substring(0, 200));
+            throw new Error("Server returned non-JSON response");
+          }
+          
           return response.json();
         })
         .then((data) => {
-          const result = data as { addr?: string, error: number };
+          const result = data as { addr?: string, error: number, username?: string, uuid?: number };
           if (result.error !== 0) {
             throw new Error("Server refused: " + result.error);
           }
 
-          console.log("Address fetched:", result.addr);
+          console.log("Address fetched successfully:", result.addr);
           this.addr = result.addr ?? "";
+          
+          // If user info is available and not already set, set it
+          if (result.uuid && !this.user) {
+            console.log("Setting user info from fetchAddr:", {uuid: result.uuid, username: result.username});
+            this.setUser({
+              uuid: result.uuid,
+              username: result.username || `User${result.uuid}`
+            });
+          }
+          
           this.addrPromise = null;
           return this.addr;
+        })
+        .catch((error) => {
+          console.error("fetchAddr failed:", error);
+          this.addrPromise = null;
+          throw error;
         });
 
       return this.addrPromise;

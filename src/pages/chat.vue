@@ -4,7 +4,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { getDefaultConversationData } from "@/utils/helper";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -23,7 +23,15 @@ const conversation = ref<{
   loadingMessages: boolean;
   [key: string]: any;
 }>(getDefaultConversationData());
-const routerParams = route.params as { id?: number };
+const routerParams = route.params as { user?: string; session_id?: string };
+
+// 监听 conversation.id 变化进行调试
+watch(
+  () => conversation.value.id,
+  (newId, oldId) => {
+    console.log(`[chat.vue] conversation.id changed: ${oldId} -> ${newId}`);
+  }
+);
 
 // 🔧 修改 watch 逻辑，处理未登录状态
 watch(
@@ -32,13 +40,18 @@ watch(
     // @ts-ignore
     const userId = stateStore.user?.uuid || null; // 获取当前用户ID
     // @ts-ignore
-    // const sessionId = params.session_id;
+    const sessionId = params.session_id;
+    console.log(
+      `Route params changed: user=${
+        (params as any).user
+      }, session_id=${sessionId}`
+    );
 
-    // console.log(
-      // `Route params changed: user=${userId}, session_id=${sessionId}`
-    // );
-
-    console.log("[chat.vue watch] stateStore.user before check:", JSON.stringify(stateStore.user));
+    console.log(
+      "[chat.vue watch] stateStore.user before check:",
+      JSON.stringify(stateStore.user)
+    ); 
+    
     // 🔧 检查用户是否登录
     if (!stateStore.user) {
       console.log("User not logged in, showing guest mode");
@@ -51,21 +64,31 @@ watch(
       return;
     }
 
-    // if (sessionId) {
-    //   // 有会话ID，加载特定会话
-    //   conversation.value = {
-    //     id: Number(sessionId),
-    //     messages: [],
-    //     loadingMessages: true,
-    //   };
-    // } else {
-    //   // 无会话ID，创建新会话
-    //   conversation.value = {
-    //     id: null,
-    //     messages: [],
-    //     loadingMessages: false,
-    //   };
-    // }
+    if (sessionId) {
+      // 有会话ID，加载特定会话
+      console.log("Loading conversation for session:", sessionId);
+      const newId = Number(sessionId);
+      
+      // 只有当 conversation.id 真正发生变化时才更新
+      if (conversation.value.id !== newId) {
+        conversation.value = {
+          id: newId,
+          messages: [],
+          loadingMessages: true,
+        };
+        console.log(`Conversation ID updated to: ${newId}`);
+      } else {
+        console.log(`Conversation ID already set to: ${newId}, skipping update`);
+      }
+    } else {
+      // 无会话ID，创建新会话
+      console.log("No session ID, creating new conversation");
+      conversation.value = {
+        id: null,
+        messages: [],
+        loadingMessages: false,
+      };
+    }
   },
   { immediate: true }
 );
@@ -116,17 +139,41 @@ const navTitle = computed(() => {
 });
 
 onMounted(async () => {
-
   console.log("Chat page mounted");
-  await stateStore.fetchAddr(); // 确保地址信息已加载
+  
+  // 确保用户已登录
+  if (!stateStore.user) {
+    console.log("User not authenticated in chat mount, waiting for route guard...");
+    // Wait a short time for route guard to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  // 确保地址信息已加载
+  try {
+    await stateStore.fetchAddr();
+    console.log("Address fetched successfully:", stateStore.addr);
+  } catch (error) {
+    console.error("Failed to fetch address in chat mount:", error);
+  }
 
-  // @ts-ignore
-  if (route.params.id) {
-    conversation.value.loadingMessages = true;
-    // TODO: 后面有空可以重构一下，把分散在 Conversation.vue 和 NavigationDrawer.vue 的初始化集中到这里
-    // await loadConversation();
-    // await loadMessage();
-    conversation.value.loadingMessages = false;
+  // 检查是否有 session_id 参数
+  const params = route.params as { user?: string; session_id?: string };
+  console.log("Chat mount params:", params);
+  
+  if (params.session_id && stateStore.user) {
+    console.log("Setting up conversation with session_id:", params.session_id);
+    conversation.value = {
+      id: Number(params.session_id),
+      messages: [],
+      loadingMessages: true,
+    };
+  } else {
+    console.log("No session_id or user not authenticated, setting up new conversation");
+    conversation.value = {
+      id: null,
+      messages: [],
+      loadingMessages: false,
+    };
   }
 });
 
@@ -184,6 +231,38 @@ const signOut = async () => {
     stateStore.setUser(null);
   }
 };
+
+// 监听用户状态变化，确保认证完成后正确初始化会话
+watch(
+  () => stateStore.user,
+  (newUser, oldUser) => {
+    console.log("[chat.vue] User state changed:", { oldUser, newUser });
+    
+    if (newUser && !oldUser) {
+      // 用户刚刚登录，重新处理路由参数
+      console.log("User just authenticated, re-processing route params");
+      const params = route.params as { user?: string; session_id?: string };
+      
+      if (params.session_id) {
+        console.log("Setting up authenticated conversation with session_id:", params.session_id);
+        const newId = Number(params.session_id);
+        conversation.value = {
+          id: newId,
+          messages: [],
+          loadingMessages: true,
+        };
+      }
+    } else if (!newUser && oldUser) {
+      // 用户登出，重置会话
+      console.log("User logged out, resetting conversation");
+      conversation.value = {
+        id: null,
+        messages: [],
+        loadingMessages: false,
+      };
+    }
+  }
+);
 </script>
 
 <template>
@@ -209,7 +288,9 @@ const signOut = async () => {
         >
           <Welcome
             :class="{ loading: conversation.loadingMessages }"
-            v-if="!routerParams.id && conversation.messages.length === 0"
+            v-if="
+              !routerParams.session_id && conversation.messages.length === 0
+            "
           />
           <Conversation :conversation="conversation" />
         </div>

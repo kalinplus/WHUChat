@@ -859,7 +859,25 @@ const loadConversationHistory = async () => {
     return;
   }
 
-  console.log(`Loading history for session ID: ${props.conversation.id}`);
+  // 检查用户是否已认证
+  if (!stateStore.user) {
+    console.log("User not authenticated, cannot load history for session ID:", props.conversation.id);
+    if (props.conversation) {
+      props.conversation.loadingMessages = false;
+    }
+    return;
+  }
+
+  // 检查服务器地址是否可用
+  if (!stateStore.addr) {
+    console.log("Server address not available, cannot load history");
+    if (props.conversation) {
+      props.conversation.loadingMessages = false;
+    }
+    return;
+  }
+
+  console.log(`Loading history for session ID: ${props.conversation.id}, user: ${stateStore.user.uuid}`);
 
   try {
     // 设置加载状态
@@ -869,9 +887,11 @@ const loadConversationHistory = async () => {
     props.conversation.messages = [];
 
     const requestData = {
-      uuid: stateStore.user?.uuid || 1,
+      uuid: stateStore.user.uuid,
       session_id: props.conversation.id,
     };
+
+    console.log("Sending browse_messages request with data:", requestData);
 
     // 使用axios发送请求获取历史消息
     const response = await axios.post(
@@ -979,6 +999,12 @@ watch(
     console.log(`Conversation ID changed (watch): ${oldId} -> ${newId}`);
 
     if (newId !== null && newId !== undefined) {
+      // 检查用户是否已认证
+      if (!stateStore.user) {
+        console.log("User not authenticated yet, skipping history load for ID:", newId);
+        return;
+      }
+      
       // 条件1: ID 确实发生了变化 (newId !== oldId)
       // 条件2: 或者 oldId 是 undefined (表示组件首次加载或页面刷新时，newId 已有值)
       //        并且当前没有消息 (避免在某些情况下重复加载)
@@ -988,6 +1014,7 @@ watch(
           (!props.conversation.messages ||
             props.conversation.messages.length === 0))
       ) {
+        console.log("Triggering loadConversationHistory for ID:", newId);
         loadConversationHistory();
       }
     } else if (newId === null) {
@@ -1007,6 +1034,20 @@ const hasMessages = computed(
     props.conversation &&
     props.conversation.messages &&
     props.conversation.messages.length > 0
+);
+
+// 监听用户状态变化，确保用户认证后能够加载历史消息
+watch(
+  () => stateStore.user,
+  (newUser, oldUser) => {
+    console.log(`[Conversation] User state changed: ${oldUser?.uuid} -> ${newUser?.uuid}`);
+    
+    if (newUser && !oldUser && props.conversation?.id) {
+      // 用户刚刚认证完成，且有会话ID，立即加载历史消息
+      console.log("User authenticated, loading conversation history for ID:", props.conversation.id);
+      loadConversationHistory();
+    }
+  }
 );
 </script>
 
