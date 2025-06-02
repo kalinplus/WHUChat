@@ -232,6 +232,7 @@ const resetWebsocketTimeout = () => {
       }
 
       // Close the connection with a specific reason
+      console.log("resetWebsocketTimeout abortFetch 被调用了");
       abortFetch(1001, "WebSocket timeout");
     }, WEBSOCKET_TIMEOUT_DURATION);
   }
@@ -280,6 +281,7 @@ const setupWebSocket = (sessionId: number) => {
     const hardTimeout = setTimeout(() => {
       if (stateStore.fetchingResponse) {
         console.warn("Hard timeout reached - forcing connection closed");
+        console.log("setupWebSocket abortFetch 被调用了");
         abortFetch(1001, "Response never completed");
         showSnackbar("总响应超时，已强制结束连接");
       }
@@ -346,6 +348,7 @@ const setupWebSocket = (sessionId: number) => {
           );
           setTimeout(() => {
             if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+              console.log("ws.value.onmessage abortFetch 被调用了");
               abortFetch(
                 1000,
                 "Client received end marker and processed queue"
@@ -515,6 +518,9 @@ const abortFetch = (
     console.log(
       `Closing WebSocket with code: ${closeCode}, reason: ${closeReason}`
     );
+    console.log(
+      "Conversation.vue abortFetch ws.value.close 被调用了 ！！！！！"
+    );
     ws.value.close(closeCode, closeReason);
   } else if (ws.value) {
     console.log(`WebSocket not open, current state: ${ws.value.readyState}`);
@@ -558,6 +564,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
 
   // 添加请求超时
   fetchTimeout = setTimeout(() => {
+    console.log("fetchReply abortFetch1 被调用了");
     abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
   }, Number(import.meta.env.VITE_SEND_TIMEOUT));
@@ -679,6 +686,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     stateStore.fetchingResponse = false;
     console.error(err);
     clearNewSessionData(); // 清理新会话数据
+    console.log("fetchReply abortFetch2 被调用了");
     abortFetch();
     showSnackbar(err.message);
   }
@@ -832,6 +840,7 @@ const stop = () => {
   isProcessingQueue = false;
 
   // 关闭连接
+  console.log("stop abortFetch 被调用了");
   abortFetch(1000, "User manually canceled");
 
   showSnackbar("回答已取消");
@@ -873,9 +882,9 @@ onUnmounted(() => {
 
   clearNewSessionData();
 
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.close();
-  }
+  // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+  //   ws.value.close();
+  // }
 
   clearTypewriter();
   clearWebsocketTimeout();
