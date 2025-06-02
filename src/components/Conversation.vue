@@ -240,7 +240,7 @@ const resetWebsocketTimeout = () => {
 
       // Close the connection with a specific reason
       console.log("resetWebsocketTimeout abortFetch 被调用了");
-      abortFetch(1001, "WebSocket timeout");
+      // abortFetch(1001, "WebSocket timeout");
     }, WEBSOCKET_TIMEOUT_DURATION);
   }
 };
@@ -292,7 +292,7 @@ const setupWebSocket = (sessionId: number) => {
       if (stateStore.fetchingResponse) {
         console.warn("Hard timeout reached - forcing connection closed");
         console.log("setupWebSocket abortFetch 被调用了");
-        abortFetch(1001, "Response never completed");
+        // abortFetch(1001, "Response never completed");
         showSnackbar("总响应超时，已强制结束连接");
       }
     }, 60000);
@@ -317,7 +317,7 @@ const setupWebSocket = (sessionId: number) => {
       console.log("Received end marker.");
       // 直接调用 abortFetch，不再等待打字机
       console.log("ws.value.onmessage END_MARKER abortFetch 被调用了");
-      abortFetch(1000, "Client received end marker");
+      // abortFetch(1000, "Client received end marker");
     } else {
       if (messageData && messageData.trim() !== "") {
         messageQueue.push(messageData);
@@ -347,7 +347,7 @@ const setupWebSocket = (sessionId: number) => {
     showSnackbar(t("webSocketConnectionError"));
     // 根据旧代码逻辑，onerror 也会调用 abortFetch 来确保清理
     console.log("ws.value.onerror abortFetch 被调用了");
-    abortFetch(1006, "WebSocket error occurred");
+    // abortFetch(1006, "WebSocket error occurred");
   };
 
   ws.value.onclose = (event) => {
@@ -356,7 +356,7 @@ const setupWebSocket = (sessionId: number) => {
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
     );
 
-    stateStore.fetchingResponse = false;
+    // stateStore.fetchingResponse = false;
     clearWebsocketTimeout();
     wsConnected.value = false;
 
@@ -369,7 +369,7 @@ const setupWebSocket = (sessionId: number) => {
     // 清理新会话数据
     // clearNewSessionData();
 
-    ws.value = null;
+    // ws.value = null;
 
     console.log(
       `WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`
@@ -485,7 +485,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   // 添加请求超时
   fetchTimeout = setTimeout(() => {
     console.log("fetchReply abortFetch1 被调用了");
-    abortFetch(1001, "HTTP request timeout");
+    // abortFetch(1001, "HTTP request timeout");
     showSnackbar("请求超时，请检查网络连接");
   }, Number(import.meta.env.VITE_SEND_TIMEOUT));
 
@@ -612,7 +612,7 @@ const fetchReply = async (message: PromptArrayItem[]) => {
     console.error("Fetch reply error:", err);
     clearNewSessionData(); // 清理新会话数据
     console.log("fetchReply abortFetch2 被调用了");
-    abortFetch(1000, "Fetch reply failed");
+    // abortFetch(1000, "Fetch reply failed");
     showSnackbar(err.message || t("fetchReplyError"));
   }
 };
@@ -748,7 +748,7 @@ const stop = () => {
   isProcessingQueue = false;
   // 关闭连接
   console.log("stop abortFetch 被调用了");
-  abortFetch(1000, "User manually canceled");
+  // abortFetch(1000, "User manually canceled");
 
   showSnackbar("回答已取消");
 };
@@ -794,7 +794,7 @@ onUnmounted(() => {
   // abortFetch 会处理 ws.value.close()
   // 但如果组件卸载时仍在 fetchingResponse，可能需要主动调用
   if (stateStore.fetchingResponse) {
-    abortFetch(1000, "Component unmounted");
+    // abortFetch(1000, "Component unmounted");
   } else if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     // ws.value.close(1000, "Component unmounted");
   }
