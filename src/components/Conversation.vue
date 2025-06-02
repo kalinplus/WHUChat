@@ -15,7 +15,7 @@ import type {
   PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
-import request from '@/utils/request';
+import request from "@/utils/request";
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -253,7 +253,9 @@ const setupWebSocket = (sessionId: number) => {
       ? parseInt(currentModel.value.model_id as string, 10)
       : (currentModel.value.model_id as number);
 
-  const wsUrl = `wss://${stateStore.addr}/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
+  const wsUrl = `wss://${
+    stateStore.addr
+  }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
     stateStore.user?.uuid || 1
   )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
     modelId
@@ -587,15 +589,18 @@ const fetchReply = async (message: PromptArrayItem[]) => {
   try {
     stateStore.fetchingResponse = true;
 
-    const response = await fetch(`https://${stateStore.addr}/api/v1/chat/send_message`, {
-      signal: ctrl.signal,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(requestData),
-    });
+    const response = await fetch(
+      `https://${stateStore.addr}/api/v1/chat/send_message`,
+      {
+        signal: ctrl.signal,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(requestData),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
@@ -662,7 +667,7 @@ const handleMessageComplete = async () => {
       if (newSessionData.value.needsRouteUpdate) {
         console.log("Updating route to new session...");
         await router.push(
-          `/${stateStore.user?.uuid || 1}/${newSessionData.value.sessionId}`
+          `/chat/${stateStore.user?.uuid}/${newSessionData.value.sessionId}`
         );
 
         // 等待路由跳转完成
@@ -702,14 +707,17 @@ const updateConversationTitleAsync = async (
 
     console.log("Updating title with data:", updateTitleRequestData);
 
-    const updateTitleResponse = await fetch(`https://${stateStore.addr}/api/v1/chat/update_title`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(updateTitleRequestData),
-    });
+    const updateTitleResponse = await fetch(
+      `https://${stateStore.addr}/api/v1/chat/update_title`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(updateTitleRequestData),
+      }
+    );
 
     if (!updateTitleResponse.ok) {
       const errorText = await updateTitleResponse.text();
@@ -862,7 +870,10 @@ const loadConversationHistory = async () => {
 
   // 检查用户是否已认证
   if (!stateStore.user) {
-    console.log("User not authenticated, cannot load history for session ID:", props.conversation.id);
+    console.log(
+      "User not authenticated, cannot load history for session ID:",
+      props.conversation.id
+    );
     if (props.conversation) {
       props.conversation.loadingMessages = false;
     }
@@ -878,7 +889,9 @@ const loadConversationHistory = async () => {
     return;
   }
 
-  console.log(`Loading history for session ID: ${props.conversation.id}, user: ${stateStore.user.uuid}`);
+  console.log(
+    `Loading history for session ID: ${props.conversation.id}, user: ${stateStore.user.uuid}`
+  );
 
   try {
     // 设置加载状态
@@ -1002,7 +1015,10 @@ watch(
     if (newId !== null && newId !== undefined) {
       // 检查用户是否已认证
       if (!stateStore.user) {
-        console.log("User not authenticated yet, skipping history load for ID:", newId);
+        console.log(
+          "User not authenticated yet, skipping history load for ID:",
+          newId
+        );
         return;
       }
 
@@ -1041,11 +1057,16 @@ const hasMessages = computed(
 watch(
   () => stateStore.user,
   (newUser, oldUser) => {
-    console.log(`[Conversation] User state changed: ${oldUser?.uuid} -> ${newUser?.uuid}`);
+    console.log(
+      `[Conversation] User state changed: ${oldUser?.uuid} -> ${newUser?.uuid}`
+    );
 
     if (newUser && !oldUser && props.conversation?.id) {
       // 用户刚刚认证完成，且有会话ID，立即加载历史消息
-      console.log("User authenticated, loading conversation history for ID:", props.conversation.id);
+      console.log(
+        "User authenticated, loading conversation history for ID:",
+        props.conversation.id
+      );
       loadConversationHistory();
     }
   }

@@ -50,8 +50,8 @@ watch(
     console.log(
       "[chat.vue watch] stateStore.user before check:",
       JSON.stringify(stateStore.user)
-    ); 
-    
+    );
+
     // 🔧 检查用户是否登录
     if (!stateStore.user) {
       console.log("User not logged in, showing guest mode");
@@ -68,7 +68,7 @@ watch(
       // 有会话ID，加载特定会话
       console.log("Loading conversation for session:", sessionId);
       const newId = Number(sessionId);
-      
+
       // 只有当 conversation.id 真正发生变化时才更新
       if (conversation.value.id !== newId) {
         conversation.value = {
@@ -78,7 +78,9 @@ watch(
         };
         console.log(`Conversation ID updated to: ${newId}`);
       } else {
-        console.log(`Conversation ID already set to: ${newId}, skipping update`);
+        console.log(
+          `Conversation ID already set to: ${newId}, skipping update`
+        );
       }
     } else {
       // 无会话ID，创建新会话
@@ -116,8 +118,8 @@ watch(
 // };
 
 const createNewConversation = () => {
-  if (route.path !== "/") {
-    return router.push("/?new");
+  if (route.path !== "/chat") {
+    return router.push("/chat");
   }
   conversation.value = Object.assign(getDefaultConversationData(), {
     topic: t("newConversation"),
@@ -140,14 +142,16 @@ const navTitle = computed(() => {
 
 onMounted(async () => {
   console.log("Chat page mounted");
-  
+
   // 确保用户已登录
   if (!stateStore.user) {
-    console.log("User not authenticated in chat mount, waiting for route guard...");
+    console.log(
+      "User not authenticated in chat mount, waiting for route guard..."
+    );
     // Wait a short time for route guard to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  
+
   // 确保地址信息已加载
   try {
     await stateStore.fetchAddr();
@@ -159,7 +163,7 @@ onMounted(async () => {
   // 检查是否有 session_id 参数
   const params = route.params as { user?: string; session_id?: string };
   console.log("Chat mount params:", params);
-  
+
   if (params.session_id && stateStore.user) {
     console.log("Setting up conversation with session_id:", params.session_id);
     conversation.value = {
@@ -168,7 +172,9 @@ onMounted(async () => {
       loadingMessages: true,
     };
   } else {
-    console.log("No session_id or user not authenticated, setting up new conversation");
+    console.log(
+      "No session_id or user not authenticated, setting up new conversation"
+    );
     conversation.value = {
       id: null,
       messages: [],
@@ -237,14 +243,17 @@ watch(
   () => stateStore.user,
   (newUser, oldUser) => {
     console.log("[chat.vue] User state changed:", { oldUser, newUser });
-    
+
     if (newUser && !oldUser) {
       // 用户刚刚登录，重新处理路由参数
       console.log("User just authenticated, re-processing route params");
       const params = route.params as { user?: string; session_id?: string };
-      
+
       if (params.session_id) {
-        console.log("Setting up authenticated conversation with session_id:", params.session_id);
+        console.log(
+          "Setting up authenticated conversation with session_id:",
+          params.session_id
+        );
         const newId = Number(params.session_id);
         conversation.value = {
           id: newId,

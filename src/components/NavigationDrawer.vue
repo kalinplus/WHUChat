@@ -171,7 +171,7 @@ const deleteConversation = async (index: number) => {
       // @ts-ignore
       parseInt(route.params.id) === deletingConversation.id
     ) {
-      await router.push("/");
+      await router.push("/chat");
     }
   }
 };
@@ -389,7 +389,6 @@ onMounted(async () => {
   loadConversations();
 });
 
-// TODO: 陈致远做设置界面
 const currentThemeName = computed(() => {
   return theme.global.name.value;
 });
