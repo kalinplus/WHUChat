@@ -23,9 +23,9 @@ const { currentModel } = storeToRefs(stateStore);
 // TODO: 明确message的内容
 const messageQueue: { [key: string]: any } = [];
 // 定义标记常量
-const START_MARKER = "\u001C\u001C\u001C";
+const START_MARKER = "\u001c\u001c\u001c";
 // 前端检测结束的标志，理论上是 content 结束，不会检测 end 标记（虽然二者现在一样）
-const END_MARKER = "\u001C\u200C\u001C";
+const END_MARKER = "\u001c\u200c\u001c";
 const router = useRouter();
 
 interface Settings {
@@ -253,9 +253,9 @@ const setupWebSocket = (sessionId: number) => {
   console.log("setupWebSocket 开始");
 
   // 关闭已存在的连接
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.close(1000, "New connection requested");
-  }
+  // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+  //   ws.value.close(1000, "New connection requested");
+  // }
 
   const modelId =
     typeof currentModel.value.model_id === "string"
@@ -299,6 +299,7 @@ const setupWebSocket = (sessionId: number) => {
 
     ws.value?.addEventListener("close", () => clearTimeout(hardTimeout));
   };
+
   // 接收消息时
   ws.value.onmessage = (event) => {
     console.log("ws.value.onmessage 开始");
@@ -387,10 +388,7 @@ const setupWebSocket = (sessionId: number) => {
 // 终止函数，同时处理HTTP请求和WebSocket
 let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
-const abortFetch = (
-  closeCode: number = 1000,
-  closeReason: string
-) => {
+const abortFetch = (closeCode: number = 1000, closeReason: string) => {
   console.log("abortFetch 开始");
   console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`);
 
@@ -441,7 +439,7 @@ const abortFetch = (
     console.log(
       "Conversation.vue abortFetch ws.value.close 被调用了 ！！！！！"
     );
-    ws.value.close(closeCode, closeReason);
+    // ws.value.close(closeCode, closeReason);
   } else if (ws.value) {
     console.log(`WebSocket not open, current state: ${ws.value.readyState}`);
   } else {
@@ -777,7 +775,7 @@ const deleteMessage = (index: number) => {
 
 // 处理模型选择
 const handleModelSelect = (model: any) => {
-  console.log("handleModelSelect 开始")
+  console.log("handleModelSelect 开始");
   if (model) {
     // 更新 Pinia store 中的模型
     stateStore.setCurrentModel(model);
@@ -788,7 +786,7 @@ const handleModelSelect = (model: any) => {
 
 // 组件卸载时的清理
 onUnmounted(() => {
-  console.log("onUnmounted 开始")
+  console.log("onUnmounted 开始");
   console.log("Conversation component unmounting, cleaning up...");
 
   // clearNewSessionData();
@@ -798,7 +796,7 @@ onUnmounted(() => {
   if (stateStore.fetchingResponse) {
     abortFetch(1000, "Component unmounted");
   } else if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.close(1000, "Component unmounted");
+    // ws.value.close(1000, "Component unmounted");
   }
 
   clearTypewriter();
@@ -815,7 +813,7 @@ onUnmounted(() => {
  * 加载当前会话的所有历史对话消息
  */
 const loadConversationHistory = async () => {
-  console.log("loadConversationHistory 开始")
+  console.log("loadConversationHistory 开始");
   // 如果没有会话ID，则不需要加载历史
   if (!props.conversation?.id) {
     console.log("No conversation ID, skipping history load.");
@@ -999,9 +997,9 @@ watch(
         props.conversation.loadingMessages = false;
       }
       // 如果 ws 仍然连接，关闭它
-      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-        ws.value.close(1000, "Switched to new unsaved conversation");
-      }
+      // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+      //   ws.value.close(1000, "Switched to new unsaved conversation");
+      // }
       clearTypewriter();
       isProcessingQueue = false;
       while (messageQueue.length > 0) messageQueue.shift();
