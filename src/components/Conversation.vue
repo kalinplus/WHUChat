@@ -266,9 +266,7 @@ const setupWebSocket = (sessionId: number) => {
     stateStore.addr
   }/api/v1/ws/trans_ans?uuid=${encodeURIComponent(
     stateStore.user?.uuid || 1
-  )}&session_id=${encodeURIComponent(sessionId)}&model_id=${encodeURIComponent(
-    modelId
-  )}`;
+  )}&session_id=${encodeURIComponent(sessionId)}}`;
 
   console.log("Connecting to WebSocket:", wsUrl);
   ws.value = new WebSocket(wsUrl);
