@@ -156,14 +156,13 @@ const processMessageQueue = () => {
   }
   // 打字机效果
   if (typewriter && messageText.length > 0 && stateStore.fetchingResponse) {
-    // <--- 增加 fetchingResponse.value 条件
     let wordIndex = 0;
     if (typewriterIntervalId) clearInterval(typewriterIntervalId);
     typewriterIntervalId = setInterval(() => {
       if (
         wordIndex < messageText.length &&
         props.conversation.messages.length > 0 &&
-        stateStore.fetchingResponse // <--- 增加 fetchingResponse.value 条件
+        stateStore.fetchingResponse
       ) {
         props.conversation.messages[
           props.conversation.messages.length - 1
@@ -207,7 +206,7 @@ const clearTypewriter = () => {
 };
 
 // 超时熔断机制
-const WEBSOCKET_TIMEOUT_DURATION = 60000; // 60 seconds in milliseconds
+const WEBSOCKET_TIMEOUT_DURATION = 120000; // 60 seconds in milliseconds
 let websocketTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearWebsocketTimeout = () => {
@@ -293,7 +292,7 @@ const setupWebSocket = (sessionId: number) => {
         abortFetch(1001, "Response never completed");
         showSnackbar("总响应超时，已强制结束连接");
       }
-    }, 60000);
+    }, 120000);
 
     ws.value?.addEventListener("close", () => clearTimeout(hardTimeout));
   };
@@ -396,6 +395,7 @@ const abortFetch = (closeCode: number = 1000, closeReason: string) => {
   //   messageQueue.shift();
   // }
   // isProcessingQueue = false;
+  stateStore.fetchingResponse = false;
 
   if (stateStore.fetchingResponse) {
     stateStore.fetchingResponse = false;
@@ -707,7 +707,7 @@ const scrollChatWindow = () => {
 // 发送prompt, message 对应 MsgEditor 中 send 方法发送的
 const send = (message: any) => {
   console.log("send 开始");
-  // stateStore.fetchingResponse = true;
+  stateStore.fetchingResponse = true;
   if (props.conversation.messages.length === 0 && !props.conversation.id) {
     // addConversation(props.conversation);
   }
