@@ -243,9 +243,9 @@ const wsConnected = ref(false);
 
 const setupWebSocket = (sessionId: number) => {
   // 关闭已存在的连接
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.close();
-  }
+  // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+  //   ws.value.close();
+  // }
 
   const modelId =
     typeof currentModel.value.model_id === "string"
@@ -427,6 +427,7 @@ const setupWebSocket = (sessionId: number) => {
 
     console.error("WebSocket error:", error);
   };
+
   ws.value.onclose = (event) => {
     console.log(
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
