@@ -389,7 +389,7 @@ let ctrl: AbortController | null = null;
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null;
 const abortFetch = (
   closeCode: number = 1000,
-  closeReason: string = "User manually cancelled"
+  closeReason: string
 ) => {
   console.log("abortFetch 开始");
   console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`);
