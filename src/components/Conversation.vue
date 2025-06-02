@@ -118,6 +118,7 @@ const typewriterDelay = import.meta.env.VITE_TYPEWRITERDELAY as number;
 let typewriterIntervalId: ReturnType<typeof setInterval> | null = null;
 
 const processMessageQueue = () => {
+  console.log("processMessageQueue 开始");
   // 如果正在处理队列或队列为空，直接返回
   if (isProcessingQueue || messageQueue.length === 0) {
     return;
@@ -147,7 +148,6 @@ const processMessageQueue = () => {
       ? nextMessage
       : nextMessage?.toString() || "";
 
-  // 🔧 修复：检查消息文本是否为空
   if (!messageText || messageText.trim() === "") {
     console.log("Empty message in queue, skipping...");
     isProcessingQueue = false;
@@ -155,48 +155,55 @@ const processMessageQueue = () => {
     return;
   }
   // 打字机效果
-  if (typewriter && messageText.length > 0) {
+  if (typewriter && messageText.length > 0 && stateStore.fetchingResponse) {
+    // <--- 增加 fetchingResponse.value 条件
     let wordIndex = 0;
     if (typewriterIntervalId) clearInterval(typewriterIntervalId);
     typewriterIntervalId = setInterval(() => {
-      // 确保索引在有效范围内
       if (
         wordIndex < messageText.length &&
-        props.conversation.messages.length > 0
+        props.conversation.messages.length > 0 &&
+        stateStore.fetchingResponse // <--- 增加 fetchingResponse.value 条件
       ) {
         props.conversation.messages[
           props.conversation.messages.length - 1
         ].message += messageText[wordIndex];
         wordIndex++;
       } else {
-        // 如果索引超出范围或消息数组为空，清除定时器
         if (typewriterIntervalId !== null) {
           clearInterval(typewriterIntervalId);
         }
         typewriterIntervalId = null;
         isProcessingQueue = false;
-        processMessageQueue(); // 处理下一条消息
+        // 只有在还在获取响应时才继续处理队列
+        if (stateStore.fetchingResponse) {
+          processMessageQueue();
+        }
       }
     }, typewriterDelay);
   } else {
-    // 确保消息数组不为空
     if (props.conversation.messages.length > 0) {
       props.conversation.messages[
         props.conversation.messages.length - 1
       ].message += messageText;
     }
     isProcessingQueue = false;
-    processMessageQueue();
+    // 只有在还在获取响应时才继续处理队列
+    if (stateStore.fetchingResponse) {
+      processMessageQueue();
+    }
   }
+  console.log("processMessageQueue 结束");
 };
 
 const clearTypewriter = () => {
+  console.log("clearTypewriter 开始");
   if (typewriterIntervalId) {
     clearInterval(typewriterIntervalId);
     typewriterIntervalId = null;
     console.log("Typewriter interval cleared.");
   }
-  isProcessingQueue = false; // 确保处理队列也停止
+  console.log("clearTypewriter 结束");
 };
 
 // 超时熔断机制
@@ -243,10 +250,12 @@ const ws = ref<WebSocket | null>(null);
 const wsConnected = ref(false);
 
 const setupWebSocket = (sessionId: number) => {
+  console.log("setupWebSocket 开始");
+
   // 关闭已存在的连接
-  // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-  //   ws.value.close();
-  // }
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.close(1000, "New connection requested");
+  }
 
   const modelId =
     typeof currentModel.value.model_id === "string"
@@ -265,6 +274,7 @@ const setupWebSocket = (sessionId: number) => {
   ws.value = new WebSocket(wsUrl);
   // 打开连接时
   ws.value.onopen = () => {
+    console.log("ws.value.onopen 开始");
     wsConnected.value = true;
     console.log("WebSocket connected");
     resetWebsocketTimeout();
@@ -291,116 +301,22 @@ const setupWebSocket = (sessionId: number) => {
   };
   // 接收消息时
   ws.value.onmessage = (event) => {
+    console.log("ws.value.onmessage 开始");
     resetWebsocketTimeout();
 
     const messageData =
       typeof event.data === "string" ? event.data : event.data.toString();
-    console.log("WebSocket raw message received:", messageData);
+    // console.log("WebSocket raw message received:", messageData);
 
     if (messageData === START_MARKER) {
+      // hasReceivedStartMarker = true;
       console.log("Received start marker.");
     } else if (messageData === END_MARKER) {
+      // hasReceivedEndMarker = true;
       console.log("Received end marker.");
-      let hasReceivedEndMarker = true;
-
-      // 立即设置状态并清理资源
-      stateStore.fetchingResponse = false;
-      // clearTypewriter();
-      clearWebsocketTimeout();
-
-      // 检查最后一条消息（应该是机器人的回复）是否为空
-      let isEmptyResponse = false;
-      if (props.conversation.messages.length > 0) {
-        const lastMessage =
-          props.conversation.messages[props.conversation.messages.length - 1];
-        if (
-          lastMessage.is_bot &&
-          (!lastMessage.message || lastMessage.message.trim() === "")
-        ) {
-          isEmptyResponse = true;
-        }
-      } else {
-        isEmptyResponse = true;
-      }
-      const waitForQueueAndTypewriter = setInterval(() => {
-        if (
-          messageQueue.length === 0 &&
-          !isProcessingQueue &&
-          !typewriterIntervalId
-        ) {
-          clearInterval(waitForQueueAndTypewriter);
-          console.log(
-            "All messages processed and typewriter finished after END_MARKER."
-          );
-
-          // 清理打字机
-          clearTypewriter();
-
-          // 处理后续操作
-          nextTick(async () => {
-            await handleMessageComplete();
-            scrollChatWindow(); // 确保在所有内容渲染后滚动
-          });
-
-          // 现在可以安全地关闭 WebSocket
-          console.log(
-            "✅ Message streaming complete, scheduling connection close after queue processing."
-          );
-          setTimeout(() => {
-            if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-              console.log("ws.value.onmessage abortFetch 被调用了");
-              abortFetch(
-                1000,
-                "Client received end marker and processed queue"
-              );
-            }
-          }, 500); // 给一点点缓冲时间
-        }
-      }, 100); // 每100ms检查一次
-      // if (isEmptyResponse) {
-      //   console.log(
-      //     "Bot response is empty upon END_MARKER. Setting default message."
-      //   );
-      //   let targetMessage;
-      //   if (
-      //     props.conversation.messages.length > 0 &&
-      //     props.conversation.messages[props.conversation.messages.length - 1]
-      //       .is_bot
-      //   ) {
-      //     targetMessage =
-      //       props.conversation.messages[props.conversation.messages.length - 1];
-      //   } else {
-      //     const newBotMessage = {
-      //       id: null,
-      //       is_bot: true,
-      //       message: "",
-      //       message_type: "text",
-      //     };
-      //     props.conversation.messages.push(newBotMessage);
-      //     targetMessage = newBotMessage;
-      //   }
-      //   targetMessage.message = t("emptyResponseFromServer");
-
-      //   nextTick(() => {
-      //     scrollChatWindow();
-      //   });
-      // }
-
-      // // 清空消息队列
-      // while (messageQueue.length > 0) {
-      //   messageQueue.shift();
-      // }
-      // isProcessingQueue = false;
-
-      // // 消息接收完成后，处理新会话的后续操作
-      // nextTick(async () => {
-      //   await handleMessageComplete();
-      //   // 在所有操作完成后滚动到底部
-      //   scrollChatWindow();
-      // });
-
-      // // Close normally
-      // abortFetch(1000, "Client received end marker");
+      // 直接调用 abortFetch，不再等待打字机
+      console.log("ws.value.onmessage END_MARKER abortFetch 被调用了");
+      abortFetch(1000, "Client received end marker");
     } else {
       if (messageData && messageData.trim() !== "") {
         messageQueue.push(messageData);
@@ -414,41 +330,43 @@ const setupWebSocket = (sessionId: number) => {
 
   // 错误和关闭处理
   ws.value.onerror = (error) => {
+    console.log("ws.value.onerror 开始");
+
     console.error("WebSocket onerror event:", error);
-    clearTypewriter();
     stateStore.fetchingResponse = false;
     clearWebsocketTimeout();
     wsConnected.value = false;
 
+    clearTypewriter();
     while (messageQueue.length > 0) {
       messageQueue.shift();
     }
     isProcessingQueue = false;
 
-    // 清理新会话数据
-    clearNewSessionData();
-
-    console.error("WebSocket error:", error);
+    showSnackbar(t("webSocketConnectionError"));
+    // 根据旧代码逻辑，onerror 也会调用 abortFetch 来确保清理
+    console.log("ws.value.onerror abortFetch 被调用了");
+    abortFetch(1006, "WebSocket error occurred");
   };
 
   ws.value.onclose = (event) => {
-    console.log("%%%%% DEBUG: onclose CALLED - NEW VERSION %%%%%");
+    console.log("ws.value.onclose 开始");
     console.log(
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
     );
 
-    clearTypewriter();
     stateStore.fetchingResponse = false;
     clearWebsocketTimeout();
     wsConnected.value = false;
 
+    clearTypewriter();
     while (messageQueue.length > 0) {
       messageQueue.shift();
     }
     isProcessingQueue = false;
 
     // 清理新会话数据
-    clearNewSessionData();
+    // clearNewSessionData();
 
     ws.value = null;
 
@@ -473,14 +391,15 @@ const abortFetch = (
   closeCode: number = 1000,
   closeReason: string = "User manually cancelled"
 ) => {
+  console.log("abortFetch 开始");
   console.log(`abortFetch called. Reason: ${closeReason}, Code: ${closeCode}`);
 
-  clearTypewriter();
+  // clearTypewriter();
 
-  while (messageQueue.length > 0) {
-    messageQueue.shift();
-  }
-  isProcessingQueue = false;
+  // while (messageQueue.length > 0) {
+  //   messageQueue.shift();
+  // }
+  // isProcessingQueue = false;
 
   if (stateStore.fetchingResponse) {
     stateStore.fetchingResponse = false;
@@ -494,8 +413,8 @@ const abortFetch = (
     });
   }
 
-  // 🔧 清理新会话数据
-  clearNewSessionData();
+  // 清理新会话数据
+  // clearNewSessionData();
 
   clearWebsocketTimeout();
 
@@ -528,11 +447,11 @@ const abortFetch = (
   } else {
     console.log("WebSocket instance is null in abortFetch");
   }
-
-  if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
-    ws.value = null;
-    wsConnected.value = false;
-  }
+  // 这个状态应该由 onclose 控制
+  // if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
+  //   ws.value = null;
+  //   wsConnected.value = false;
+  // }
 };
 
 // 用于管理新会话的状态
@@ -550,6 +469,7 @@ const newSessionData = ref<{
 
 // 清除新会话数据
 const clearNewSessionData = () => {
+  console.log("clearNewSessionData 开始");
   newSessionData.value = {
     sessionId: null,
     title: null,
@@ -561,6 +481,7 @@ const clearNewSessionData = () => {
 // 发送对话，获取请求
 const fetchReply = async (message: PromptArrayItem[]) => {
   // 创建 AbortController 用于取消 HTTP 请求
+  console.log("fetchReply 开始");
   ctrl = new AbortController();
 
   // 添加请求超时
@@ -589,7 +510,8 @@ const fetchReply = async (message: PromptArrayItem[]) => {
 
   if (isNaN(modelId)) {
     console.error("Invalid model ID:", currentModel.value.model_id);
-    showSnackbar("模型ID无效，请在设置中选择有效的模型");
+    showSnackbar(t("invalidModelId"));
+    stateStore.fetchingResponse = false; // 重置状态
     return;
   }
 
@@ -667,73 +589,54 @@ const fetchReply = async (message: PromptArrayItem[]) => {
       // 立即更新 conversation ID，这样 WebSocket 可以正确连接
       props.conversation.id = responseData.session_id;
 
-      // 保存新会话数据，等待消息接收完成后处理
-      newSessionData.value = {
-        sessionId: responseData.session_id,
-        title: formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat"),
-        needsRouteUpdate: true,
-        needsTitleUpdate: true,
-      };
+      // // 保存新会话数据，等待消息接收完成后处理
+      // newSessionData.value = {
+      //   sessionId: responseData.session_id,
+      //   title: formattedPrompt[0]?.text?.substring(0, 10) || t("new Chat"),
+      //   needsRouteUpdate: true,
+      //   needsTitleUpdate: true,
+      // };
+      props.conversation.title =
+        formattedPrompt[0]?.text?.substring(0, 20) || t("new Chat");
+      addConversation(props.conversation); // 确保新会话被添加到列表
+      router.push(`/chat/${stateStore.user?.uuid}/${responseData.session_id}`);
 
-      console.log(
-        "New session created, data saved for post-processing:",
-        newSessionData.value
-      );
+      // console.log(
+      //   "New session created, data saved for post-processing:",
+      //   newSessionData.value
+      // );
     }
-
+    clearNewSessionData();
     // 建立WebSocket连接
     setupWebSocket(responseData.session_id || props.conversation.id);
   } catch (err: any) {
     stateStore.fetchingResponse = false;
-    console.error(err);
+    console.error("Fetch reply error:", err);
     clearNewSessionData(); // 清理新会话数据
     console.log("fetchReply abortFetch2 被调用了");
-    abortFetch();
-    showSnackbar(err.message);
+    abortFetch(1000, "Fetch reply failed");
+    showSnackbar(err.message || t("fetchReplyError"));
   }
 };
 
 // 消息接收完成后的处理函数
 const handleMessageComplete = async () => {
-  console.log("Message complete, checking for post-processing...");
-
-  // 检查是否有待处理的新会话操作
+  console.log("Message complete handling (simplified).");
+  // 旧代码逻辑下，大部分状态更新和UI操作在WebSocket事件处理器或abortFetch中直接完成
+  // 如果新会话的路由和标题更新仍然需要，可以保留简化版本：
+  if (newSessionData.value.sessionId && newSessionData.value.needsRouteUpdate) {
+    // await router.push(`/chat/${stateStore.user?.uuid}/${newSessionData.value.sessionId}`);
+    // console.log("Route updated for new session (simplified).");
+  }
   if (
     newSessionData.value.sessionId &&
-    (newSessionData.value.needsRouteUpdate ||
-      newSessionData.value.needsTitleUpdate)
+    newSessionData.value.needsTitleUpdate &&
+    newSessionData.value.title
   ) {
-    console.log("Processing new session post-operations...");
-
-    try {
-      // 🔧 1. 首先处理路由跳转
-      if (newSessionData.value.needsRouteUpdate) {
-        console.log("Updating route to new session...");
-        await router.push(
-          `/chat/${stateStore.user?.uuid}/${newSessionData.value.sessionId}`
-        );
-
-        // 等待路由跳转完成
-        await nextTick();
-        console.log("Route update completed");
-      }
-
-      // 🔧 2. 然后异步更新标题（不阻塞主流程）
-      if (newSessionData.value.needsTitleUpdate && newSessionData.value.title) {
-        console.log("Starting title update...");
-        updateConversationTitleAsync(
-          newSessionData.value.sessionId,
-          newSessionData.value.title
-        );
-      }
-    } catch (error) {
-      console.error("Error in post-message processing:", error);
-      // 即使出错，也不影响聊天功能
-    } finally {
-      // 清理新会话数据
-      clearNewSessionData();
-    }
+    // updateConversationTitleAsync(newSessionData.value.sessionId, newSessionData.value.title);
+    // console.log("Title update initiated for new session (simplified).");
   }
+  clearNewSessionData(); // 总是清理
 };
 
 // 异步标题更新函数
@@ -795,20 +698,28 @@ const updateConversationTitleAsync = async (
 const grab = ref<{
   scrollIntoView: (obj: { behavior: string }) => void;
 } | null>(null);
+
 const scrollChatWindow = () => {
+  console.log("scrollChatWindow 开始");
   // @ts-ignore
   const parent = grab.value?.parentElement;
   if (parent) {
-    // 滚动到底部并向上调整 64px
-    parent.scrollTop = parent.scrollHeight - parent.clientHeight - 64;
+    parent.scrollTop = parent.scrollHeight; // 简化滚动逻辑，直接到底部
   }
 };
+
 // 发送prompt, message 对应 MsgEditor 中 send 方法发送的
 const send = (message: any) => {
-  stateStore.fetchingResponse = true;
-  if (props.conversation.messages.length === 0) {
-    addConversation(props.conversation);
+  console.log("send 开始");
+  // stateStore.fetchingResponse = true;
+  if (props.conversation.messages.length === 0 && !props.conversation.id) {
+    // addConversation(props.conversation);
   }
+  const userMessage = {
+    is_bot: false,
+    message: "",
+    message_type: "text", // 默认
+  };
   if (Array.isArray(message)) {
     props.conversation.messages.push(
       ...message.map((i) => ({
@@ -826,20 +737,17 @@ const send = (message: any) => {
   scrollChatWindow();
 };
 const stop = () => {
+  console.log("stop 开始");
   console.log("Stop function called");
-
   // 立即重置状态
   stateStore.fetchingResponse = false;
-
   // 清除打字机效果
   clearTypewriter();
-
   // 清空消息队列
   while (messageQueue.length > 0) {
     messageQueue.shift();
   }
   isProcessingQueue = false;
-
   // 关闭连接
   console.log("stop abortFetch 被调用了");
   abortFetch(1000, "User manually canceled");
@@ -869,6 +777,7 @@ const deleteMessage = (index: number) => {
 
 // 处理模型选择
 const handleModelSelect = (model: any) => {
+  console.log("handleModelSelect 开始")
   if (model) {
     // 更新 Pinia store 中的模型
     stateStore.setCurrentModel(model);
@@ -879,17 +788,22 @@ const handleModelSelect = (model: any) => {
 
 // 组件卸载时的清理
 onUnmounted(() => {
+  console.log("onUnmounted 开始")
   console.log("Conversation component unmounting, cleaning up...");
 
-  clearNewSessionData();
+  // clearNewSessionData();
 
-  // if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-  //   ws.value.close();
-  // }
+  // abortFetch 会处理 ws.value.close()
+  // 但如果组件卸载时仍在 fetchingResponse，可能需要主动调用
+  if (stateStore.fetchingResponse) {
+    abortFetch(1000, "Component unmounted");
+  } else if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.close(1000, "Component unmounted");
+  }
 
   clearTypewriter();
   clearWebsocketTimeout();
-  stateStore.fetchingResponse = false;
+  // stateStore.fetchingResponse = false;
 
   while (messageQueue.length > 0) {
     messageQueue.shift();
@@ -901,6 +815,7 @@ onUnmounted(() => {
  * 加载当前会话的所有历史对话消息
  */
 const loadConversationHistory = async () => {
+  console.log("loadConversationHistory 开始")
   // 如果没有会话ID，则不需要加载历史
   if (!props.conversation?.id) {
     console.log("No conversation ID, skipping history load.");
@@ -1054,41 +969,47 @@ const loadConversationHistory = async () => {
 watch(
   () => props.conversation.id,
   (newId, oldId) => {
-    console.log(`Conversation ID changed (watch): ${oldId} -> ${newId}`);
+    console.log(`[CONV_WATCH] ID changed: ${oldId} -> ${newId}`);
+    clearNewSessionData(); // 切换会话时，清除旧的新会话数据
 
     if (newId !== null && newId !== undefined) {
-      // 检查用户是否已认证
       if (!stateStore.user) {
         console.log(
-          "User not authenticated yet, skipping history load for ID:",
+          "[CONV_WATCH] User not authenticated yet, skipping history load for ID:",
           newId
         );
         return;
       }
-
-      // 条件1: ID 确实发生了变化 (newId !== oldId)
-      // 条件2: 或者 oldId 是 undefined (表示组件首次加载或页面刷新时，newId 已有值)
-      //        并且当前没有消息 (避免在某些情况下重复加载)
       if (
         newId !== oldId ||
         (oldId === undefined &&
           (!props.conversation.messages ||
             props.conversation.messages.length === 0))
       ) {
-        console.log("Triggering loadConversationHistory for ID:", newId);
+        console.log(
+          "[CONV_WATCH] Triggering loadConversationHistory for ID:",
+          newId
+        );
         loadConversationHistory();
       }
     } else if (newId === null) {
-      // newId 是 null，表示切换到新对话
+      // 新建会话，清空消息
       if (props.conversation) {
-        // 确保 props.conversation 存在
         props.conversation.messages = [];
         props.conversation.loadingMessages = false;
       }
+      // 如果 ws 仍然连接，关闭它
+      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+        ws.value.close(1000, "Switched to new unsaved conversation");
+      }
+      clearTypewriter();
+      isProcessingQueue = false;
+      while (messageQueue.length > 0) messageQueue.shift();
     }
   },
   { immediate: true }
 );
+
 // 判断是否有历史消息
 const hasMessages = computed(
   () =>

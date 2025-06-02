@@ -152,5 +152,8 @@
   "Email Already Registered": "Email already registered",
   "Passwords Do Not Match": "Password don't match",
   "Invalid Verification Code": "Invalid verification code",
-  "Unknown Error": "Unknown error"
+  "Unknown Error": "Unknown error",
+  "webSocketConnectionError": "WebSocket Connection Error",
+  "invalidModelId": "Invalid model Id",
+  "fetchReplyError": "Fetch Reply Error"
 }

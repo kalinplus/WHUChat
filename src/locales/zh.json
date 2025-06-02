@@ -158,5 +158,8 @@
   "Email Already Registered": "邮箱已注册",
   "Passwords Do Not Match": "密码不匹配",
   "Invalid Verification Code": "验证码非法",
-  "Unknown Error": "未知错误"
+  "Unknown Error": "未知错误",
+  "webSocketConnectionError": "WebSocket 连接失败",
+  "invalidModelId": "模型ID无效，请在设置中选择有效的模型",
+  "fetchReplyError": "接收回复失败"
 }
