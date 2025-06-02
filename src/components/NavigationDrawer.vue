@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// TODO: 需要新增接口
 import { onMounted } from "vue";
 import { useDisplay, useTheme } from "vuetify";
 import { useI18n } from "vue-i18n";
@@ -253,7 +252,7 @@ const exportConversation = async (index: number) => {
   document.body.removeChild(element);
 };
 
-// FIXME: 导入会话可以先不考虑
+// TODO: 导入会话可以先不考虑
 // const openImportFileChooser = async () => {
 //   let input_element = document.getElementById("import_conversation_input");
 //   input_element?.click();
@@ -482,8 +481,8 @@ const settingDialog = ref(false);
               base-color="primary"
               :to="
                 conversation.id
-                  ? `/${stateStore.user?.uuid || 0}/${conversation.id}`
-                  : '/'
+                  ? `/chat/${stateStore.user?.uuid || 0}/${conversation.id}`
+                  : '/chat'
               "
               v-bind="props"
             >

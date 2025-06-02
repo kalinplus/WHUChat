@@ -1,0 +1,1 @@
+import{h as t,k as a,m as o,al as n,p as r,an as s,l as _}from"./index-CbX8lzTW.js";const m=t({__name:"default",setup(c){return(l,p)=>{const e=s("router-view");return _(),a(n,null,{default:o(()=>[r(e)]),_:1})}}});export{m as default};
