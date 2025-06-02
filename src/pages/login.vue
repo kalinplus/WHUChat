@@ -20,7 +20,7 @@
             {{
               isRegister
                 ? t("Already have an account?")
-                : t("Don't have an account?")
+                : t("Do not have an account?")
             }}
           </p>
           <v-btn
@@ -359,7 +359,10 @@ const handleLogin = async () => {
       // { withCredentials: true }
     );
     console.log(encryptPassword(loginForm.value.password));
-    console.log("[login.vue] Raw response from /api/v1/gate/login:", result.value);
+    console.log(
+      "[login.vue] Raw response from /api/v1/gate/login:",
+      result.value
+    );
 
     // const result = await request.get("http://localhost:3000/login");
     // 处理响应

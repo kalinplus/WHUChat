@@ -15,7 +15,6 @@ import type {
   PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
-import request from "@/utils/request";
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -300,10 +299,11 @@ const setupWebSocket = (sessionId: number) => {
       console.log("Received start marker.");
     } else if (messageData === END_MARKER) {
       console.log("Received end marker.");
+      let hasReceivedEndMarker = true;
 
-      // 🔧 立即设置状态并清理资源
+      // 立即设置状态并清理资源
       stateStore.fetchingResponse = false;
-      clearTypewriter();
+      // clearTypewriter();
       clearWebsocketTimeout();
 
       // 检查最后一条消息（应该是机器人的回复）是否为空
@@ -320,51 +320,84 @@ const setupWebSocket = (sessionId: number) => {
       } else {
         isEmptyResponse = true;
       }
-
-      if (isEmptyResponse) {
-        console.log(
-          "Bot response is empty upon END_MARKER. Setting default message."
-        );
-        let targetMessage;
+      const waitForQueueAndTypewriter = setInterval(() => {
         if (
-          props.conversation.messages.length > 0 &&
-          props.conversation.messages[props.conversation.messages.length - 1]
-            .is_bot
+          messageQueue.length === 0 &&
+          !isProcessingQueue &&
+          !typewriterIntervalId
         ) {
-          targetMessage =
-            props.conversation.messages[props.conversation.messages.length - 1];
-        } else {
-          const newBotMessage = {
-            id: null,
-            is_bot: true,
-            message: "",
-            message_type: "text",
-          };
-          props.conversation.messages.push(newBotMessage);
-          targetMessage = newBotMessage;
+          clearInterval(waitForQueueAndTypewriter);
+          console.log(
+            "All messages processed and typewriter finished after END_MARKER."
+          );
+
+          // 清理打字机
+          clearTypewriter();
+
+          // 处理后续操作
+          nextTick(async () => {
+            await handleMessageComplete();
+            scrollChatWindow(); // 确保在所有内容渲染后滚动
+          });
+
+          // 现在可以安全地关闭 WebSocket
+          console.log(
+            "✅ Message streaming complete, scheduling connection close after queue processing."
+          );
+          setTimeout(() => {
+            if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+              abortFetch(
+                1000,
+                "Client received end marker and processed queue"
+              );
+            }
+          }, 500); // 给一点点缓冲时间
         }
-        targetMessage.message = t("emptyResponseFromServer");
+      }, 100); // 每100ms检查一次
+      // if (isEmptyResponse) {
+      //   console.log(
+      //     "Bot response is empty upon END_MARKER. Setting default message."
+      //   );
+      //   let targetMessage;
+      //   if (
+      //     props.conversation.messages.length > 0 &&
+      //     props.conversation.messages[props.conversation.messages.length - 1]
+      //       .is_bot
+      //   ) {
+      //     targetMessage =
+      //       props.conversation.messages[props.conversation.messages.length - 1];
+      //   } else {
+      //     const newBotMessage = {
+      //       id: null,
+      //       is_bot: true,
+      //       message: "",
+      //       message_type: "text",
+      //     };
+      //     props.conversation.messages.push(newBotMessage);
+      //     targetMessage = newBotMessage;
+      //   }
+      //   targetMessage.message = t("emptyResponseFromServer");
 
-        nextTick(() => {
-          scrollChatWindow();
-        });
-      }
+      //   nextTick(() => {
+      //     scrollChatWindow();
+      //   });
+      // }
 
-      // 🔧 清空消息队列
-      while (messageQueue.length > 0) {
-        messageQueue.shift();
-      }
-      isProcessingQueue = false;
+      // // 清空消息队列
+      // while (messageQueue.length > 0) {
+      //   messageQueue.shift();
+      // }
+      // isProcessingQueue = false;
 
-      // 🔧 关键改进：消息接收完成后，处理新会话的后续操作
-      nextTick(async () => {
-        await handleMessageComplete();
-        // 在所有操作完成后滚动到底部
-        scrollChatWindow();
-      });
+      // // 消息接收完成后，处理新会话的后续操作
+      // nextTick(async () => {
+      //   await handleMessageComplete();
+      //   // 在所有操作完成后滚动到底部
+      //   scrollChatWindow();
+      // });
 
-      // Close normally
-      abortFetch(1000, "Client received end marker");
+      // // Close normally
+      // abortFetch(1000, "Client received end marker");
     } else {
       if (messageData && messageData.trim() !== "") {
         messageQueue.push(messageData);

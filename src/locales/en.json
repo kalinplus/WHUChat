@@ -144,5 +144,13 @@
   "titleUpdateError": "Title Update Failed",
   "emptyResponseFromServer": "Empty Response From Server",
   "loginRequiredError": "Invalid User, please login again",
-  "signOutError": "Sign Out Error"
+  "signOutError": "Sign Out Error",
+  "Don": "Don't have an account",
+  "Your login is successful": "Your login is successful",
+  "Verification Code Sent to Email": "Verification code sent to email",
+  "Username Already Exists": "Username already exists",
+  "Email Already Registered": "Email already registered",
+  "Passwords Do Not Match": "Password don't match",
+  "Invalid Verification Code": "Invalid verification code",
+  "Unknown Error": "Unknown error"
 }

@@ -151,5 +151,12 @@
   "titleUpdateError": "标题更新失败",
   "emptyResponseFromServer": "服务器未返回有效内容",
   "loginRequiredError": "用户 id 无效，请先登录",
-  "signOutError": "登出失败"
+  "signOutError": "登出失败",
+  "Don": "没有账户？",
+  "Verification Code Sent to Email": "验证码已发送到邮箱",
+  "Username Already Exists": "用户名已存在",
+  "Email Already Registered": "邮箱已注册",
+  "Passwords Do Not Match": "密码不匹配",
+  "Invalid Verification Code": "验证码非法",
+  "Unknown Error": "未知错误"
 }
