@@ -432,6 +432,7 @@ const setupWebSocket = (sessionId: number) => {
   };
 
   ws.value.onclose = (event) => {
+    console.log("%%%%% DEBUG: onclose CALLED - NEW VERSION %%%%%");
     console.log(
       `WebSocket onclose event. Code: ${event.code}, Reason: ${event.reason}, WasClean: ${event.wasClean}`
     );
@@ -446,7 +447,7 @@ const setupWebSocket = (sessionId: number) => {
     }
     isProcessingQueue = false;
 
-    // 🔧 清理新会话数据
+    // 清理新会话数据
     clearNewSessionData();
 
     ws.value = null;
