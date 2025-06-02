@@ -15,6 +15,7 @@ import type {
   PromptArrayItem,
 } from "@/types/types";
 import axios from "axios";
+import request from '@/utils/request';
 
 // const openaiApiKey = useApiKey();
 const { t } = useI18n();
@@ -1004,7 +1005,7 @@ watch(
         console.log("User not authenticated yet, skipping history load for ID:", newId);
         return;
       }
-      
+
       // 条件1: ID 确实发生了变化 (newId !== oldId)
       // 条件2: 或者 oldId 是 undefined (表示组件首次加载或页面刷新时，newId 已有值)
       //        并且当前没有消息 (避免在某些情况下重复加载)
@@ -1041,7 +1042,7 @@ watch(
   () => stateStore.user,
   (newUser, oldUser) => {
     console.log(`[Conversation] User state changed: ${oldUser?.uuid} -> ${newUser?.uuid}`);
-    
+
     if (newUser && !oldUser && props.conversation?.id) {
       // 用户刚刚认证完成，且有会话ID，立即加载历史消息
       console.log("User authenticated, loading conversation history for ID:", props.conversation.id);

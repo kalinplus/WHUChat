@@ -30,7 +30,7 @@ export const useStateStore = defineStore("stateStore", {
     drawer: false,
     fetchingResponse: false,
     addr: null as string | null,
-    addrPromise: null as Promise<string> | null
+    addrPromise: null as Promise<string> | null,
   }),
   actions: {
     setCurrentModel(model: ModelConfig) {
@@ -118,7 +118,10 @@ export const useStateStore = defineStore("stateStore", {
     setUser(user: UserProfile | null) {
       console.log("[stores/states.ts] setUser called with:", user);
       this.user = user;
-      console.log("[stores/states.ts] stateStore.user after assignment:", this.user);
+      console.log(
+        "[stores/states.ts] stateStore.user after assignment:",
+        this.user
+      );
     },
     toggleDrawer() {
       this.drawer = !this.drawer;
@@ -135,10 +138,14 @@ export const useStateStore = defineStore("stateStore", {
     setAddr(addr: string | null) {
       console.log("[stores/states.ts] setAddr called with:", addr);
       this.addr = addr;
-      console.log("[stores/states.ts] stateStore.addr after assignment:", this.addr);
-    },    async fetchAddr() {
+      console.log(
+        "[stores/states.ts] stateStore.addr after assignment:",
+        this.addr
+      );
+    },
+    async fetchAddr() {
       console.log("Fetching address from server...");
-      
+
       // If there's already a request in progress, wait for it
       if (this.addrPromise) {
         console.log("Address fetch already in progress, waiting for result...");
@@ -153,40 +160,48 @@ export const useStateStore = defineStore("stateStore", {
 
       this.addrPromise = fetch("/api/v1/gate/get_chatserver", {
         method: "GET",
-        credentials: "include"
+        credentials: "include",
       })
         .then(async (response) => {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
-          
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
+
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
             const text = await response.text();
             console.error("Expected JSON but got:", text.substring(0, 200));
             throw new Error("Server returned non-JSON response");
           }
-          
+
           return response.json();
         })
         .then((data) => {
-          const result = data as { addr?: string, error: number, username?: string, uuid?: number };
+          const result = data as {
+            addr?: string;
+            error: number;
+            username?: string;
+            uuid?: number;
+          };
           if (result.error !== 0) {
             throw new Error("Server refused: " + result.error);
           }
 
           console.log("Address fetched successfully:", result.addr);
           this.addr = result.addr ?? "";
-          
+
           // If user info is available and not already set, set it
           if (result.uuid && !this.user) {
-            console.log("Setting user info from fetchAddr:", {uuid: result.uuid, username: result.username});
-            this.setUser({
+            console.log("Setting user info from fetchAddr:", {
               uuid: result.uuid,
-              username: result.username || `User${result.uuid}`
+              username: result.username,
+            });
+            this.setUser({
+              uuid: Number(result.uuid),
+              username: result.username || `User${result.uuid}`,
             });
           }
-          
+
           this.addrPromise = null;
           return this.addr;
         })
@@ -197,6 +212,6 @@ export const useStateStore = defineStore("stateStore", {
         });
 
       return this.addrPromise;
-    }
+    },
   },
 });

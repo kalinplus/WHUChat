@@ -370,11 +370,11 @@ const handleLogin = async () => {
       throw new Error();
     } else {
       loginResult.value = {
-        uuid: result.value.uuid,
+        uuid: Number(result.value.uuid),
         error: result.value.error,
       };
       user.value = {
-        uuid: result.value.uuid,
+        uuid: Number(result.value.uuid),
         username: result.value.username,
         email: result.value.email,
       };

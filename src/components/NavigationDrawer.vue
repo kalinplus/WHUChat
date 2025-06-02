@@ -313,8 +313,7 @@ const loadConversations = async () => {
 
     const response = await axios.post(
       `https://${stateStore.addr}/api/v1/chat/history`,
-      // TODO: uuid 要和登录注册联动好，现在 1 是测试
-      { uuid: stateStore.user?.uuid || 1 },
+      { uuid: Number(stateStore.user?.uuid) || 1 },
       {
         headers: {
           "Content-Type": "application/json",
