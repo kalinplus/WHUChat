@@ -5,34 +5,13 @@
  */
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-const app = createApp(App);
-const pinia = createPinia();
-app.use(pinia);
-
-// Plugins
-import { registerPlugins } from "@/plugins";
-
-import { createI18n } from "vue-i18n";
 import App from "./App.vue";
-import router from "./router";
-import { createVuetify } from "vuetify";
-import enMessages from "./locales/en.json";
-import zhMessages from "./locales/zh.json";
+import { registerPlugins } from "@/plugins";
 import "@mdi/font/css/materialdesignicons.css";
 
-const i18n = createI18n({
-  legacy: false, // 使用组合式API
-  locale: "zh", // 默认语言
-  fallbackLocale: "en",
-  messages: {
-    en: enMessages,
-    zh: zhMessages,
-  },
-});
+const app = createApp(App);
+const pinia = createPinia();
 
-app.use(i18n);
-
-// 注册所有插件
+app.use(pinia);
 registerPlugins(app);
-
 app.mount("#app");

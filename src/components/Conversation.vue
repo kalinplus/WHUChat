@@ -314,6 +314,18 @@ const setupWebSocket = (sessionId: number) => {
       console.log("Received end marker.");
       // 直接调用 abortFetch，不再等待打字机
       console.log("ws.value.onmessage END_MARKER abortFetch 被调用了");
+            // Update the last message if it's a bot message
+            if (props.conversation.messages.length > 0) {
+        const lastMessage =
+          props.conversation.messages[props.conversation.messages.length - 1];
+        console.log("lastMessage is: ", lastMessage);
+        if (lastMessage.is_bot &&  lastMessage.message === "") {
+          // Use nextTick to ensure UI updates before potential abort delays
+          nextTick(() => {
+            lastMessage.message = "服务器繁忙，请稍后重试";
+          });
+        }
+      }
       abortFetch(1000, "Client received end marker");
     } else {
       if (messageData && messageData.trim() !== "") {
