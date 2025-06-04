@@ -29,6 +29,7 @@
   "E-mail address must be valid": "电子邮箱地址格式不正确",
   "Please enter your password": "请输入你的密码",
   "Password must be at least 8 characters": "密码至少八个字符",
+  "Do not have an account?": "您还没有账号？",
   "Please confirm your password": "请输入确认密码",
   "The passwords do not match": "两次输入的密码不一致",
   "The network connection is abnormal": "网络连接异常",

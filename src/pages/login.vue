@@ -227,7 +227,7 @@ const isRegister = ref(false);
 const showPassword = ref([false, false, false]);
 const loading = ref(false);
 const timer = ref<any>(null);
-const errorCode = ref(0);
+const errorCode = ref(-1);
 const loadingForVrfcode = ref(false);
 const user = ref<UserProfile>();
 
@@ -319,15 +319,6 @@ const alertMessage = computed(() => {
 // ======================
 // 工具函数
 // ======================
-const parseCookies = () => {
-  return document.cookie
-    .split(";")
-    .reduce((cookies: Record<string, string>, cookie) => {
-      const [name, value] = cookie.trim().split("=");
-      cookies[name] = decodeURIComponent(value);
-      return cookies;
-    }, {});
-};
 
 const encryptPassword = (password: string) => {
   return CryptoJS.AES.encrypt(password, SECRET_KEY, {
@@ -347,6 +338,7 @@ const handleLogin = async () => {
   if (!valid) return;
 
   isLoading.value = true;
+  errorCode.value = -1;
 
   try {
     const result = ref<any>();
@@ -363,13 +355,13 @@ const handleLogin = async () => {
       "[login.vue] Raw response from /api/v1/gate/login:",
       result.value
     );
+    console.log(errorCode.value);
 
     // const result = await request.get("http://localhost:3000/login");
     // 处理响应
     if (!result.value) {
       console.log("No response from server");
       loginResult.value = { error: -1 };
-      errorCode.value = -1;
       throw new Error();
     } else {
       loginResult.value = {
@@ -431,6 +423,7 @@ const startCountdown = () => {
 };
 const sendVrfCode = async () => {
   if (!registerForm.value.email) {
+    alertType.value = "error";
     showAlert.value = true;
     errorCode.value = 1;
     return;
@@ -478,7 +471,7 @@ const handleRegister = async () => {
 
   const { valid } = await registerform.value.validate();
   if (!valid) return;
-
+  errorCode.value = -1;
   try {
     loading.value = true;
 
@@ -524,6 +517,10 @@ const handleRegister = async () => {
     setTimeout(() => (showAlert.value = false), 1000);
   }
 };
+
+onMounted(() => {
+  document.title = "登录 - WHUChat";
+});
 </script>
 
 <style scoped>
